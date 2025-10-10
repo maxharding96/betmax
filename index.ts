@@ -57,6 +57,8 @@ const { matches } = await oddsCheckerClient.getMatches({
   league,
 })
 
+console.log(matches)
+
 for (const match of matches) {
   try {
     const response = await oddsCheckerClient.getOdds({

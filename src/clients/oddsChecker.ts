@@ -31,19 +31,23 @@ export class OddsCheckerClient extends Scraper {
     const page = await this.getPage()
     await page.goto(url, { waitUntil: 'domcontentloaded' })
 
+    console.log(url)
+
     let locator: Locator
 
     switch (league) {
       case 'Premier League':
       case 'Championship':
-      case 'League 1':
         locator = page.locator('div[class^="TeamWrapper"]')
         break
+      case 'League 1':
       case 'World Cup European Qualifiers':
         locator = page.locator('p.fixtures-bet-name.beta-footnote')
     }
 
     const count = await locator.count()
+
+    console.log(count)
 
     const matches: Match[] = []
 
