@@ -9,12 +9,13 @@ import {
   type DateOption,
   dateOptionEnum,
 } from './src/types/internal'
-import { toFbRefTeam } from './src/utils/fbRef'
+import { bettingFieldToStat, toFbRefTeam } from './src/utils/fbRef'
 import { chromium } from 'playwright-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
 import { slugify } from './src/utils/common'
 import { select, checkbox } from '@inquirer/prompts'
 import { getFieldStatsDf } from './src'
+import type { Stat, Tables } from './src/types/fbRef'
 
 chromium.use(StealthPlugin())
 
@@ -47,17 +48,11 @@ const dateOption = await select<DateOption>({
   choices: dateOptionEnum.options,
 })
 
-const tables = await fbRefClient.getStatTables({
-  league,
-  season: '2025-2026',
-  stat: 'shooting',
-})
+const statToTables = new Map<Stat, Tables>()
 
 const { matches } = await oddsCheckerClient.getMatches({
   league,
 })
-
-console.log(matches)
 
 for (const match of matches) {
   try {
@@ -76,6 +71,19 @@ for (const match of matches) {
     const fieldDfs: pl.DataFrame[] = []
 
     for (const { odds, field } of oddsByField) {
+      const stat = bettingFieldToStat(field)
+      let tables = statToTables.get(stat)
+
+      if (!tables) {
+        tables = await fbRefClient.getStatTables({
+          league,
+          season: '2025-2026',
+          stat,
+        })
+
+        statToTables.set(stat, tables)
+      }
+
       const df = getFieldStatsDf({
         tables,
         homeTeam: toFbRefTeam(match.home),
@@ -83,6 +91,7 @@ for (const match of matches) {
         odds,
         field,
         points,
+        stat,
       })
 
       fieldDfs.push(df)
@@ -91,6 +100,8 @@ for (const match of matches) {
     if (fieldDfs.length) {
       dfs.push(joinOnPlayer(fieldDfs))
     }
+
+    break
   } catch (e) {
     console.log(e)
   }

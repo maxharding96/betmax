@@ -1,11 +1,12 @@
 import pl from 'nodejs-polars'
 import type {
-  GetStatTablesOutput,
+  Tables,
   PlayerTableCol,
   SquadTableCol,
   Team,
+  Stat,
 } from './types/fbRef'
-import type { BettingField, League, OddsMap } from './types/internal'
+import type { BettingField, OddsMap } from './types/internal'
 import type { Odds } from './types/oddsChecker'
 import { getOrCreate } from './utils/common'
 import { bettingFieldToPlayerCol, bettingFieldToTeamCol } from './utils/fbRef'
@@ -49,7 +50,7 @@ function getStatWeight({
   opponent,
   stat,
 }: {
-  tables: GetStatTablesOutput
+  tables: Tables
   opponent: Team
   stat: SquadTableCol
 }) {
@@ -71,13 +72,15 @@ export function getFieldStatsDf({
   field,
   odds,
   points,
+  stat,
 }: {
-  tables: GetStatTablesOutput
+  tables: Tables
   homeTeam: Team
   awayTeam: Team
   field: BettingField
   odds: Odds[]
   points: number[]
+  stat: Stat
 }) {
   const map = createOddsMapping(odds)
   const names = getPlayerNames(odds)
@@ -106,6 +109,7 @@ export function getFieldStatsDf({
     map,
     names,
     points,
+    stat,
   })
 
   const awayDf = getTeamFieldStatsDf({
@@ -116,6 +120,7 @@ export function getFieldStatsDf({
     map,
     names,
     points,
+    stat,
   })
 
   return pl.concat([homeDf, awayDf]).sort('Player')
@@ -129,6 +134,7 @@ function getTeamFieldStatsDf({
   map,
   names,
   points,
+  stat,
 }: {
   playerDf: pl.DataFrame
   team: Team
@@ -137,8 +143,11 @@ function getTeamFieldStatsDf({
   map: OddsMap
   names: string[]
   points: number[]
+  stat: Stat
 }) {
-  const df = getTeamPlayersDf(playerDf, { team })
+  const df = getTeamPlayersDf(playerDf, { team, stat })
+
+  const rowsToRemove: number[] = []
 
   const cols = points
     .flatMap((point) => {
@@ -157,9 +166,22 @@ function getTeamFieldStatsDf({
         weight: weight,
       })
 
+      for (let i = 0; i < oddsCol.length; i++) {
+        const odd = oddsCol.get(i)
+        const prob = probCol.get(i)
+
+        if (!odd || !prob || prob > odd) {
+          rowsToRemove.push(i)
+        }
+      }
+
       return [probCol, oddsCol]
     })
     .filter((res) => !!res)
 
-  return df.withColumns(...cols)
+  return df
+    .withColumns(...cols)
+    .withRowCount('row_nr')
+    .filter(pl.col('row_nr').isIn(rowsToRemove).not())
+    .drop('row_nr')
 }

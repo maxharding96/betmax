@@ -1,4 +1,4 @@
-import type { GetStatTablesInput, GetStatTablesOutput } from '../types/fbRef'
+import type { GetStatTablesInput, Tables } from '../types/fbRef'
 import { type Browser } from 'playwright'
 import pl from 'nodejs-polars'
 import { leagueToStatPath } from '../utils/fbRef'
@@ -12,17 +12,26 @@ export class FbRefClient extends Scraper {
     })
   }
 
-  async getStatTables(input: GetStatTablesInput): Promise<GetStatTablesOutput> {
+  async getStatTables(input: GetStatTablesInput): Promise<Tables> {
     const { league, stat } = input
 
     const url = this.baseUrl + leagueToStatPath({ league, stat })
 
     const page = await this.getPage()
-    await page.goto(url, { waitUntil: 'networkidle' })
+    await page.goto(url, { waitUntil: 'domcontentloaded' })
 
     const showTableButton = page.locator(
       `button:has-text("Show Player Shooting")`
     )
+
+    const count1 = await page
+      .locator(`button:has-text("Show Player Misc")`)
+      .count()
+
+    const count2 = await page.locator(`button:has-text("Show Player ")`).count()
+
+    console.log(stat, count1, count2)
+
     const showTableButtonCount = await showTableButton.count()
     if (showTableButtonCount === 1) {
       await showTableButton.press('Enter')

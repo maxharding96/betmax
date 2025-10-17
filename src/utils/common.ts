@@ -1,13 +1,11 @@
-export function isToday(dateStr: string): boolean {
+export function isDateWithin(dateStr: string, days: number): boolean {
   const date = new Date(dateStr)
 
   const today = new Date()
+  const future = new Date()
+  future.setDate(future.getDate() + days)
 
-  return (
-    date.getDate() === today.getDate() &&
-    date.getMonth() === today.getMonth() &&
-    date.getFullYear() === today.getFullYear()
-  )
+  return today <= date && date < future
 }
 
 export function sleep(ms: number) {
@@ -173,4 +171,19 @@ export const getOrCreate = <K, V>(
     map.set(key, create())
   }
   return map.get(key)!
+}
+
+export function zip<T extends any[][]>(
+  ...arrays: T
+): Array<{ [K in keyof T]: T[K] extends Array<infer U> ? U : never }> {
+  if (arrays.length === 0) return []
+
+  const minLength = Math.min(...arrays.map((arr) => arr.length))
+  const result: any[] = []
+
+  for (let i = 0; i < minLength; i++) {
+    result.push(arrays.map((arr) => arr[i]))
+  }
+
+  return result
 }

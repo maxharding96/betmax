@@ -11,7 +11,7 @@ import type {
 } from '../types/oddsChecker'
 import { teamEnum } from '../types/oddsChecker'
 import { leagueToPath, matchToPath } from '../utils/oddsChecker'
-import { fractionToDecimal, isToday } from '../utils/common'
+import { fractionToDecimal, isDateWithin } from '../utils/common'
 import { Scraper } from './scraper'
 import { bettingFieldType } from '../types/internal'
 
@@ -31,8 +31,6 @@ export class OddsCheckerClient extends Scraper {
     const page = await this.getPage()
     await page.goto(url, { waitUntil: 'domcontentloaded' })
 
-    console.log(url)
-
     let locator: Locator
 
     switch (league) {
@@ -41,13 +39,10 @@ export class OddsCheckerClient extends Scraper {
         locator = page.locator('div[class^="TeamWrapper"]')
         break
       case 'League 1':
-      case 'World Cup European Qualifiers':
         locator = page.locator('p.fixtures-bet-name.beta-footnote')
     }
 
     const count = await locator.count()
-
-    console.log(count)
 
     const matches: Match[] = []
 
@@ -81,11 +76,14 @@ export class OddsCheckerClient extends Scraper {
       return null
     }
 
-    console.log(match, datetimeString)
-
     switch (dateOption) {
       case 'Today':
-        if (!isToday(datetimeString)) {
+        if (!isDateWithin(datetimeString, 1)) {
+          return null
+        }
+        break
+      case 'This week':
+        if (!isDateWithin(datetimeString, 7)) {
           return null
         }
     }

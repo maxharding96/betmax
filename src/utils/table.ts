@@ -1,9 +1,24 @@
 import pl from 'nodejs-polars'
 import xlsx from 'xlsx'
-import type { SquadTableCol, PlayerTableCol, Team } from '../types/fbRef'
+import type { SquadTableCol, PlayerTableCol, Team, Stat } from '../types/fbRef'
 import { oddsOfProbability, poissonGreaterOrEqual } from './probabilty'
 import { findBestPlayerMatch } from './common'
 import type { OddsMap } from '../types/internal'
+
+// PLayer must have at least played 180 mins
+const MIN_GAMES = 2.0
+
+const SHOOTING_COL_SELECTION = [
+  'Player',
+  'Squad',
+  '90s',
+  'Sh',
+  'SoT',
+  'Sh/90',
+  'SoT/90',
+]
+
+const MISC_COL_SELECTION = ['Player', 'Squad', '90s', 'Fls']
 
 export function getTeamStat(
   df: pl.DataFrame,
@@ -20,37 +35,15 @@ export function getTeamStat(
   const teamStr = vs ? `vs ${team}` : team
 
   return df
-    .filter(pl.col('Squad').str.contains(teamStr)) // Filter for the correct row
-    .select(stat) // Select the 'age' column
-    .getColumn(stat) // Get the column as a Series
-    .get(0)
-}
-
-export function getPlayerStatsForTeam(
-  df: pl.DataFrame,
-  {
-    team,
-  }: {
-    team: string
-  }
-) {
-  return df.filter(pl.col('Squad').str.contains(team))
-}
-
-export function getPlayerStat(
-  df: pl.DataFrame,
-  {
-    player,
-    stat,
-  }: {
-    player: string
-    stat: PlayerTableCol
-  }
-) {
-  return df
-    .filter(pl.col('Player').eq(pl.lit(player))) // Filter for the correct row
-    .select(stat) // Select the 'age' column
-    .getColumn(stat) // Get the column as a Series
+    .filter(pl.col('Squad').str.contains(teamStr))
+    .select(
+      pl
+        .col(stat)
+        .cast(pl.Float32)
+        .div(pl.col('90s').cast(pl.Float32))
+        .alias('result')
+    )
+    .getColumn('result')
     .get(0)
 }
 
@@ -62,50 +55,39 @@ export function getTeamMeanStat(
     stat: SquadTableCol
   }
 ) {
-  return df.select(pl.col(stat).cast(pl.Float32)).getColumn(stat).mean()
-}
-
-export function getPlayerMeanStat(
-  df: pl.DataFrame,
-  {
-    stat,
-  }: {
-    stat: PlayerTableCol
-  }
-) {
   return df
-    .select(pl.col(stat).cast(pl.Float32))
-    .getColumn(stat)
-    .mean()
-    .toFixed(2)
+    .select(
+      pl
+        .col(stat)
+        .cast(pl.Float32)
+        .div(pl.col('90s').cast(pl.Float32))
+        .mean()
+        .alias('result')
+    )
+    .getColumn('result')
+    .get(0)
 }
 
 export function getTeamPlayersDf(
   df: pl.DataFrame,
   {
     team,
+    stat,
   }: {
     team: Team
+    stat: Stat
   }
 ) {
-  const COL_SELECTION = [
-    'Player',
-    'Squad',
-    '90s',
-    'Sh',
-    'SoT',
-    'Sh/90',
-    'SoT/90',
-  ]
+  const selection = getStatSelection(stat)
 
   return df
     .filter(
       pl
         .col('Squad')
         .str.contains(team)
-        .and(pl.col('90s').cast(pl.Float32).gtEq(1))
+        .and(pl.col('90s').cast(pl.Float32).gtEq(MIN_GAMES))
     )
-    .select(...COL_SELECTION)
+    .select(...selection)
 }
 
 export function getPointProbabilities(
@@ -212,10 +194,21 @@ export function saveToXlsx({
 
 export function joinOnPlayer(dfs: pl.DataFrame[]) {
   return dfs.reduce((acc, df) => {
-    const joined = acc.join(df, { on: 'Player', how: 'inner', suffix: '_drop' })
+    const joined = acc.join(df, { on: 'Player', how: 'full', suffix: '_right' })
 
-    return joined.select(
-      ...joined.columns.filter((col) => !col.endsWith('_drop'))
-    )
+    return joined
+      .withColumn(
+        pl.col('Player').fillNull(pl.col('Player_right')).alias('Player')
+      )
+      .select(...joined.columns.filter((col) => !col.endsWith('_right')))
   })
+}
+
+function getStatSelection(stat: Stat) {
+  switch (stat) {
+    case 'shooting':
+      return SHOOTING_COL_SELECTION
+    case 'misc':
+      return MISC_COL_SELECTION
+  }
 }

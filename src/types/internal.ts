@@ -1,17 +1,13 @@
 import { z } from 'zod'
 
-export const leagueEnum = z.enum([
-  'Premier League',
-  'Championship',
-  'League 1',
-  'World Cup European Qualifiers',
-])
+export const leagueEnum = z.enum(['Premier League', 'Championship', 'League 1'])
 
 export type League = z.infer<typeof leagueEnum>
 
 export const bettingFieldEnum = z.enum([
   'Player Shots On Target',
   'Player Shots',
+  'Player Fouls',
 ])
 
 export type BettingField = z.infer<typeof bettingFieldEnum>
@@ -22,6 +18,6 @@ export type BettingFieldType = z.infer<typeof bettingFieldType>
 
 export type OddsMap = Map<number, Map<string, Map<BettingFieldType, number>>>
 
-export const dateOptionEnum = z.enum(['Today', 'All dates'])
+export const dateOptionEnum = z.enum(['Today', 'This week', 'All'])
 
 export type DateOption = z.infer<typeof dateOptionEnum>
