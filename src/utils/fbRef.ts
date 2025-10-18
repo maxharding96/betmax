@@ -66,6 +66,8 @@ export function toFbRefTeam(team: OddsCheckerTeam): Team {
       return 'Hull City'
     case 'Leicester':
       return 'Leicester City'
+    case 'Norwich':
+      return 'Norwich City'
     case 'Oxford':
       return 'Oxford United'
     case 'Sheffield Wednesday':
@@ -79,6 +81,10 @@ export function toFbRefTeam(team: OddsCheckerTeam): Team {
       return 'Burton Albion'
     case 'Exeter':
       return 'Exeter City'
+    case 'Lincoln':
+      return 'Lincoln City'
+    case 'Peterborough United':
+      return "P'borough Utd"
     case 'Rotherham':
       return 'Rotherham Utd'
     case 'Wigan':

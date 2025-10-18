@@ -1,10 +1,5 @@
 import { z } from 'zod'
-import {
-  bettingFieldEnum,
-  bettingFieldType,
-  dateOptionEnum,
-  leagueEnum,
-} from './internal'
+import { bettingFieldEnum, bettingFieldType, leagueEnum } from './internal'
 
 const getMatchesInputSchema = z.object({
   league: leagueEnum,
@@ -45,6 +40,7 @@ export const teamEnum = z.enum([
   'Leicester',
   'Middlesbrough',
   'Millwall',
+  'Norwich',
   'Oxford',
   'Portsmouth',
   'Preston',
@@ -65,10 +61,13 @@ export const teamEnum = z.enum([
   'Doncaster',
   'Exeter',
   'Leyton Orient',
+  'Lincoln',
   'Northampton',
   'Reading',
   'Rotherham',
+  'Peterborough United',
   'Port Vale',
+  'Stevenage',
   'Stockport',
   'Wigan',
   'Wycombe',
@@ -93,7 +92,6 @@ export type GetMatchesOutput = z.infer<typeof getMatchesOutputSchema>
 const getOddsInputSchema = z.object({
   fields: bettingFieldEnum.array(),
   match: matchSchema,
-  dateOption: dateOptionEnum,
 })
 
 export type GetOddsInput = z.infer<typeof getOddsInputSchema>

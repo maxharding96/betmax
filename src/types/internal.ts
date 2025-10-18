@@ -17,7 +17,3 @@ export const bettingFieldType = z.enum(['Over', 'Under'])
 export type BettingFieldType = z.infer<typeof bettingFieldType>
 
 export type OddsMap = Map<number, Map<string, Map<BettingFieldType, number>>>
-
-export const dateOptionEnum = z.enum(['Today', 'This week', 'All'])
-
-export type DateOption = z.infer<typeof dateOptionEnum>

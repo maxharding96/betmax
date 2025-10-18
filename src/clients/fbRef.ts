@@ -24,14 +24,6 @@ export class FbRefClient extends Scraper {
       `button:has-text("Show Player Shooting")`
     )
 
-    const count1 = await page
-      .locator(`button:has-text("Show Player Misc")`)
-      .count()
-
-    const count2 = await page.locator(`button:has-text("Show Player ")`).count()
-
-    console.log(stat, count1, count2)
-
     const showTableButtonCount = await showTableButton.count()
     if (showTableButtonCount === 1) {
       await showTableButton.press('Enter')

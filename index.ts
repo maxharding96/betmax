@@ -1,21 +1,20 @@
 import { FbRefClient, OddsCheckerClient } from './src/clients'
-import { joinOnPlayer, saveToXlsx } from './src/utils/table'
+import { join, saveToXlsx, stack } from './src/utils/table'
 import pl from 'nodejs-polars'
 import {
   leagueEnum,
   type League,
   bettingFieldEnum,
   type BettingField,
-  type DateOption,
-  dateOptionEnum,
 } from './src/types/internal'
 import { bettingFieldToStat, toFbRefTeam } from './src/utils/fbRef'
 import { chromium } from 'playwright-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
-import { slugify } from './src/utils/common'
-import { select, checkbox } from '@inquirer/prompts'
+import { select, checkbox, editor } from '@inquirer/prompts'
 import { getFieldStatsDf } from './src'
 import type { Stat, Tables } from './src/types/fbRef'
+import type { Match } from './src/types/oddsChecker'
+import chalk from 'chalk'
 
 chromium.use(StealthPlugin())
 
@@ -31,6 +30,25 @@ const league = await select<League>({
   choices: leagueEnum.options,
 })
 
+console.log(chalk.green.bold('⚽ Fetching matches...'))
+
+const { matches } = await oddsCheckerClient.getMatches({
+  league,
+})
+
+const fixtureToMatch = new Map<string, Match>()
+
+for (const match of matches) {
+  const fixture = `${match.home} vs. ${match.away}`
+  fixtureToMatch.set(fixture, match)
+}
+
+const fixtures = await checkbox<BettingField>({
+  message: 'Which matches do you want to look at?',
+  choices: [...fixtureToMatch.keys()],
+  required: true,
+})
+
 const fields = await checkbox<BettingField>({
   message: 'Which betting fields do you want?',
   choices: bettingFieldEnum.options,
@@ -43,23 +61,20 @@ const points = await checkbox<string>({
   required: true,
 }).then((ps) => ps.map(parseFloat))
 
-const dateOption = await select<DateOption>({
-  message: 'Which dates do you want fixtures from?',
-  choices: dateOptionEnum.options,
-})
-
 const statToTables = new Map<Stat, Tables>()
 
-const { matches } = await oddsCheckerClient.getMatches({
-  league,
-})
+for (const fixture of fixtures) {
+  console.log(chalk.blue(`🧮 Calculating odds for ${chalk.bold(fixture)}...`))
 
-for (const match of matches) {
+  const match = fixtureToMatch.get(fixture)
+  if (!match) {
+    continue
+  }
+
   try {
     const response = await oddsCheckerClient.getOdds({
       match,
       fields,
-      dateOption,
     })
 
     if (!response) {
@@ -98,20 +113,18 @@ for (const match of matches) {
     }
 
     if (fieldDfs.length) {
-      dfs.push(joinOnPlayer(fieldDfs))
+      dfs.push(join(fieldDfs))
     }
-
-    break
   } catch (e) {
     console.log(e)
   }
 }
 
+console.log(chalk.red.bold('📊 Generating your spreadsheet...'))
+
 if (dfs.length) {
-  saveToXlsx({
-    dfs,
-    filename: `${slugify(league)}.xlsx`,
-  })
+  const df = stack(dfs)
+  saveToXlsx(df)
 }
 
 await browser.close()

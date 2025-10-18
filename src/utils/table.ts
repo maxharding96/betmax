@@ -5,8 +5,8 @@ import { oddsOfProbability, poissonGreaterOrEqual } from './probabilty'
 import { findBestPlayerMatch } from './common'
 import type { OddsMap } from '../types/internal'
 
-// PLayer must have at least played 180 mins
-const MIN_GAMES = 2.0
+// Player must have played at least 240 mins
+const MIN_GAMES = 3.0
 
 const SHOOTING_COL_SELECTION = [
   'Player',
@@ -174,33 +174,46 @@ export function addPercentageDiff(df: pl.DataFrame) {
   )
 }
 
-export function saveToXlsx({
-  dfs,
-  filename,
-}: {
-  dfs: pl.DataFrame[]
-  filename: string
-}) {
+export function saveToXlsx(df: pl.DataFrame) {
   const workbook = xlsx.utils.book_new()
 
-  dfs.forEach((df, index) => {
-    const data = df.toRecords()
-    const worksheet = xlsx.utils.json_to_sheet(data)
-    xlsx.utils.book_append_sheet(workbook, worksheet, `game_${index + 1}`)
-  })
+  const data = df.toRecords()
+  const worksheet = xlsx.utils.json_to_sheet(data)
+  xlsx.utils.book_append_sheet(workbook, worksheet, `Results`)
 
-  xlsx.writeFile(workbook, filename)
+  xlsx.writeFile(workbook, 'betmax.xlsx')
 }
 
-export function joinOnPlayer(dfs: pl.DataFrame[]) {
+export function join(dfs: pl.DataFrame[]) {
+  const suffix = ':drop'
+
   return dfs.reduce((acc, df) => {
-    const joined = acc.join(df, { on: 'Player', how: 'full', suffix: '_right' })
+    const joined = acc.join(df, {
+      on: 'Player',
+      how: 'full',
+      suffix,
+    })
+
+    const commonCols = joined.columns
+      .filter((col) => col.endsWith(suffix))
+      .map((col) => col.split(':')[0])
 
     return joined
-      .withColumn(
-        pl.col('Player').fillNull(pl.col('Player_right')).alias('Player')
+      .withColumns(
+        ...commonCols.map((col) =>
+          pl
+            .col(col)
+            .fillNull(pl.col(col + suffix))
+            .alias(col)
+        )
       )
-      .select(...joined.columns.filter((col) => !col.endsWith('_right')))
+      .select(...joined.columns.filter((col) => !col.endsWith(suffix)))
+  })
+}
+
+export function stack(dfs: pl.DataFrame[]) {
+  return dfs.reduce((acc, df) => {
+    return pl.concat([acc, df], { how: 'diagonal' })
   })
 }
 

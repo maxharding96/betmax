@@ -11,7 +11,7 @@ import type {
 } from '../types/oddsChecker'
 import { teamEnum } from '../types/oddsChecker'
 import { leagueToPath, matchToPath } from '../utils/oddsChecker'
-import { fractionToDecimal, isDateWithin } from '../utils/common'
+import { fractionToDecimal } from '../utils/common'
 import { Scraper } from './scraper'
 import { bettingFieldType } from '../types/internal'
 
@@ -62,7 +62,7 @@ export class OddsCheckerClient extends Scraper {
   }
 
   async getOdds(input: GetOddsInput): Promise<GetOddsOutput | null> {
-    const { fields, match, dateOption } = input
+    const { fields, match } = input
 
     const url = this.baseUrl + matchToPath(match)
 
@@ -74,18 +74,6 @@ export class OddsCheckerClient extends Scraper {
     const datetimeString = await timeElement.getAttribute('datetime')
     if (!datetimeString) {
       return null
-    }
-
-    switch (dateOption) {
-      case 'Today':
-        if (!isDateWithin(datetimeString, 1)) {
-          return null
-        }
-        break
-      case 'This week':
-        if (!isDateWithin(datetimeString, 7)) {
-          return null
-        }
     }
 
     const playerBettingButton = await page.locator(
