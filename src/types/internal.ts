@@ -1,6 +1,11 @@
 import { z } from 'zod'
 
-export const leagueEnum = z.enum(['Premier League', 'Championship', 'League 1'])
+export const leagueEnum = z.enum([
+  'Premier League',
+  'Championship',
+  'League 1',
+  'La Liga',
+])
 
 export type League = z.infer<typeof leagueEnum>
 

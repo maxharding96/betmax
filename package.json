@@ -2,6 +2,9 @@
   "name": "bet-max",
   "module": "index.ts",
   "type": "module",
+  "scripts": {
+    "start": "bun run index.ts"
+  },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^24.5.2"
@@ -12,7 +15,6 @@
   "dependencies": {
     "@inquirer/prompts": "^7.8.6",
     "chalk": "^5.6.2",
-    "cheerio": "^1.1.2",
     "nodejs-polars": "^0.21.2",
     "playwright": "^1.55.1",
     "playwright-extra": "^4.3.6",

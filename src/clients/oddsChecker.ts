@@ -39,6 +39,7 @@ export class OddsCheckerClient extends Scraper {
         locator = page.locator('div[class^="TeamWrapper"]')
         break
       case 'League 1':
+      case 'La Liga':
         locator = page.locator('p.fixtures-bet-name.beta-footnote')
     }
 

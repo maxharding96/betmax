@@ -1,24 +1,16 @@
 import pl from 'nodejs-polars'
 import xlsx from 'xlsx'
 import type { SquadTableCol, PlayerTableCol, Team, Stat } from '../types/fbRef'
-import { oddsOfProbability, poissonGreaterOrEqual } from './probabilty'
+import {
+  estGamePlayedWhenStarting,
+  oddsOfProbability,
+  poissonGreaterOrEqual,
+} from './probabilty'
 import { findBestPlayerMatch } from './common'
 import type { OddsMap } from '../types/internal'
 
-// Player must have played at least 240 mins
-const MIN_GAMES = 3.0
-
-const SHOOTING_COL_SELECTION = [
-  'Player',
-  'Squad',
-  '90s',
-  'Sh',
-  'SoT',
-  'Sh/90',
-  'SoT/90',
-]
-
-const MISC_COL_SELECTION = ['Player', 'Squad', '90s', 'Fls']
+// Player must have played at least 3 games
+const MIN_GAMES = 3
 
 export function getTeamStat(
   df: pl.DataFrame,
@@ -72,22 +64,16 @@ export function getTeamPlayersDf(
   df: pl.DataFrame,
   {
     team,
-    stat,
   }: {
     team: Team
-    stat: Stat
   }
 ) {
-  const selection = getStatSelection(stat)
-
-  return df
-    .filter(
-      pl
-        .col('Squad')
-        .str.contains(team)
-        .and(pl.col('90s').cast(pl.Float32).gtEq(MIN_GAMES))
-    )
-    .select(...selection)
+  return df.filter(
+    pl
+      .col('Squad')
+      .str.contains(team)
+      .and(pl.col('MP').cast(pl.Float32).gtEq(MIN_GAMES))
+  )
 }
 
 export function getPointProbabilities(
@@ -106,6 +92,7 @@ export function getPointProbabilities(
     .getColumn(col)
     .cast(pl.Float32)
     .div(df.getColumn('90s').cast(pl.Float32))
+    .mul(df.getColumn('Est. play time'))
     .toArray()
 
   const probs: (number | null)[] = []
@@ -120,6 +107,28 @@ export function getPointProbabilities(
   })
 
   return pl.Series(`Prob ${col} > ${point}`, probs)
+}
+
+export function addEstGameTimeIfStarting(df: pl.DataFrame) {
+  const estimates: number[] = []
+
+  const records = df.toRecords()
+  for (const row of records) {
+    const matchesPlayed = parseFloat(String(row['MP']))
+    const minutesPlayed = parseFloat(String(row['Min']))
+    const starts = parseFloat(String(row['Starts']))
+
+    const est = estGamePlayedWhenStarting({
+      matchesPlayed,
+      minutesPlayed,
+      starts,
+    })
+
+    estimates.push(est)
+  }
+
+  const series = pl.Series('Est. play time', estimates)
+  return df.withColumn(series)
 }
 
 export function getPointOdds(
@@ -215,13 +224,4 @@ export function stack(dfs: pl.DataFrame[]) {
   return dfs.reduce((acc, df) => {
     return pl.concat([acc, df], { how: 'diagonal' })
   })
-}
-
-function getStatSelection(stat: Stat) {
-  switch (stat) {
-    case 'shooting':
-      return SHOOTING_COL_SELECTION
-    case 'misc':
-      return MISC_COL_SELECTION
-  }
 }

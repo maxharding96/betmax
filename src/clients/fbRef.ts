@@ -1,8 +1,13 @@
-import type { GetStatTablesInput, Tables } from '../types/fbRef'
+import type {
+  GetStatTablesInput,
+  Tables,
+  GetPlayerPlayedTableInput,
+} from '../types/fbRef'
 import { type Browser } from 'playwright'
 import pl from 'nodejs-polars'
-import { leagueToStatPath } from '../utils/fbRef'
+import { getColumns, leagueToStatPath } from '../utils/fbRef'
 import { Scraper } from './scraper'
+import { join } from '../utils/table'
 
 export class FbRefClient extends Scraper {
   constructor(browser: Browser) {
@@ -12,22 +17,60 @@ export class FbRefClient extends Scraper {
     })
   }
 
+  async getPlayerPlayedTable(
+    input: GetPlayerPlayedTableInput
+  ): Promise<pl.DataFrame> {
+    const { league } = input
+
+    const url = this.baseUrl + leagueToStatPath({ league, stat: 'standard' })
+
+    const dfs = await this.getTables(url)
+
+    const table = dfs.pop()
+    if (!table) {
+      throw new Error('Player table not found')
+    }
+    return table.select(...getColumns({ table: 'player', stat: 'standard' }))
+  }
+
   async getStatTables(input: GetStatTablesInput): Promise<Tables> {
-    const { league, stat } = input
+    const { league, stat, playerPlayedTable } = input
 
     const url = this.baseUrl + leagueToStatPath({ league, stat })
 
-    const page = await this.getPage()
-    await page.goto(url, { waitUntil: 'domcontentloaded' })
+    const dfs = await this.getTables(url)
 
-    const showTableButton = page.locator(
-      `button:has-text("Show Player Shooting")`
-    )
+    let playerTable = dfs.pop()
 
-    const showTableButtonCount = await showTableButton.count()
-    if (showTableButtonCount === 1) {
-      await showTableButton.press('Enter')
+    if (!playerTable) {
+      throw new Error('Player table not found')
     }
+
+    playerTable = playerTable.select(...getColumns({ table: 'player', stat }))
+    playerTable = join([playerPlayedTable, playerTable])
+
+    let vsSquadTable = dfs.pop()
+    if (!vsSquadTable) {
+      throw new Error('vsSquad table not found')
+    }
+    vsSquadTable.select(...getColumns({ table: 'vsSquad', stat }))
+
+    let squadTable = dfs.pop()
+    if (!squadTable) {
+      throw new Error('Squad table not found')
+    }
+    squadTable.select(...getColumns({ table: 'squad', stat }))
+
+    return {
+      squad: squadTable,
+      vsSquad: vsSquadTable,
+      player: playerTable,
+    }
+  }
+
+  private async getTables(url: string) {
+    const page = await this.getPage()
+    await page.goto(url, { waitUntil: 'networkidle' })
 
     const showHiddenButton = page.locator(`button:has-text("Show hidden rows")`)
     const showHiddenButtonCount = await showHiddenButton.count()
@@ -74,25 +117,6 @@ export class FbRefClient extends Scraper {
       dfs.push(df)
     }
 
-    const playerTable = dfs.pop()
-    if (!playerTable) {
-      throw new Error('Player table not found')
-    }
-
-    const vsSquadTable = dfs.pop()
-    if (!vsSquadTable) {
-      throw new Error('vsSquad table not found')
-    }
-
-    const squadTable = dfs.pop()
-    if (!squadTable) {
-      throw new Error('Squad table not found')
-    }
-
-    return {
-      squad: squadTable,
-      vsSquad: vsSquadTable,
-      player: playerTable,
-    }
+    return dfs
   }
 }

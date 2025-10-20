@@ -74,6 +74,27 @@ export const teamEnum = z.enum([
   'Stockport',
   'Wigan Athletic',
   'Wycombe',
+  // La Liga
+  'Alavés',
+  'Athletic Club',
+  'Atlético Madrid',
+  'Barcelona',
+  'Betis',
+  'Celta Vigo',
+  'Elche',
+  'Espanyol',
+  'Getafe',
+  'Girona',
+  'Levante',
+  'Mallorca',
+  'Osasuna',
+  'Oviedo',
+  'Rayo Vallecano',
+  'Real Madrid',
+  'Real Sociedad',
+  'Sevilla',
+  'Valencia',
+  'Villarreal',
 ])
 
 export type Team = z.infer<typeof teamEnum>
@@ -82,6 +103,7 @@ const leagueCodeEnum = z.enum([
   '9', // Premier League
   '10', // Championship
   '15', // League 1
+  '12', // La Liga
 ])
 
 export type LeagueCode = z.infer<typeof leagueCodeEnum>
@@ -90,7 +112,7 @@ const seasonEnum = z.enum(['2025-2026', '2024-2025', '2023-2024'])
 
 export type Season = z.infer<typeof seasonEnum>
 
-const statEnum = z.enum(['shooting', 'misc'])
+const statEnum = z.enum(['shooting', 'misc', 'standard'])
 
 export type Stat = z.infer<typeof statEnum>
 
@@ -144,10 +166,20 @@ const playerTableColEnum = z.enum([
 
 export type PlayerTableCol = z.infer<typeof playerTableColEnum>
 
+const getPlayerPlayedTableInputSchema = z.object({
+  league: leagueEnum,
+})
+
+export type GetPlayerPlayedTableInput = z.infer<
+  typeof getPlayerPlayedTableInputSchema
+>
+
+const df = z.custom<pl.DataFrame>((data) => data instanceof pl.DataFrame)
+
 const getStatTablesInputSchema = z.object({
   league: leagueEnum,
-  season: seasonEnum,
   stat: statEnum,
+  playerPlayedTable: df,
 })
 
 export type GetStatTablesInput = z.infer<typeof getStatTablesInputSchema>

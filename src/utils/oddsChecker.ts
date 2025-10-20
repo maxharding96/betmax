@@ -2,7 +2,7 @@ import type { League } from '../types/internal'
 import type { Match } from '../types/oddsChecker'
 import { slugify } from './common'
 
-export function leagueToPath(league: League) {
+export function leagueToPath(league: League): string {
   switch (league) {
     case 'Premier League':
       return '/english/premier-league'
@@ -10,8 +10,8 @@ export function leagueToPath(league: League) {
       return '/english/championship'
     case 'League 1':
       return '/english/league-1'
-    case 'World Cup European Qualifiers':
-      return '/world-cup-european-qualifiers'
+    case 'La Liga':
+      return '/spain/la-liga-primera'
   }
 }
 

@@ -51,3 +51,27 @@ export function oddsOfProbability(probability: number) {
 
   return roundToTwo(1 / probability)
 }
+
+export function estGamePlayedWhenStarting({
+  matchesPlayed,
+  minutesPlayed,
+  starts,
+}: {
+  matchesPlayed: number
+  minutesPlayed: number
+  starts: number
+}) {
+  if (starts === 0) {
+    return 1
+  }
+
+  // Most subs happen between the 60th and 85th minute
+  const AVERAGE_SUB_MINS = 17.5
+
+  const totalMinWhenStarting =
+    minutesPlayed - (matchesPlayed - starts) * AVERAGE_SUB_MINS
+
+  const avgMinWhenStarting = totalMinWhenStarting / starts
+
+  return roundToTwo(Math.min(avgMinWhenStarting / 90, 1))
+}

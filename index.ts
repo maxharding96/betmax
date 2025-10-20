@@ -10,7 +10,7 @@ import {
 import { bettingFieldToStat, toFbRefTeam } from './src/utils/fbRef'
 import { chromium } from 'playwright-extra'
 import StealthPlugin from 'puppeteer-extra-plugin-stealth'
-import { select, checkbox, editor } from '@inquirer/prompts'
+import { select, checkbox } from '@inquirer/prompts'
 import { getFieldStatsDf } from './src'
 import type { Stat, Tables } from './src/types/fbRef'
 import type { Match } from './src/types/oddsChecker'
@@ -38,6 +38,14 @@ const { matches } = await oddsCheckerClient.getMatches({
 
 const fixtureToMatch = new Map<string, Match>()
 
+if (!matches.length) {
+  console.log(
+    chalk.green.red(
+      '❌ No matches currently found for these league. Try again later.'
+    )
+  )
+}
+
 for (const match of matches) {
   const fixture = `${match.home} vs. ${match.away}`
   fixtureToMatch.set(fixture, match)
@@ -63,8 +71,10 @@ const points = await checkbox<string>({
 
 const statToTables = new Map<Stat, Tables>()
 
+const playerPlayedTable = await fbRefClient.getPlayerPlayedTable({ league })
+
 for (const fixture of fixtures) {
-  console.log(chalk.blue(`🧮 Calculating odds for ${chalk.bold(fixture)}...`))
+  console.log(chalk.blue.bold(`🧮 Calculating odds for ${fixture}...`))
 
   const match = fixtureToMatch.get(fixture)
   if (!match) {
@@ -92,8 +102,8 @@ for (const fixture of fixtures) {
       if (!tables) {
         tables = await fbRefClient.getStatTables({
           league,
-          season: '2025-2026',
           stat,
+          playerPlayedTable,
         })
 
         statToTables.set(stat, tables)
@@ -106,7 +116,6 @@ for (const fixture of fixtures) {
         odds,
         field,
         points,
-        stat,
       })
 
       fieldDfs.push(df)

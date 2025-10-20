@@ -4,6 +4,7 @@ import type {
   SquadTableCol,
   Stat,
   Team,
+  Table,
 } from '../types/fbRef'
 import type { BettingField, League } from '../types/internal'
 import type { Team as OddsCheckerTeam } from '../types/oddsChecker'
@@ -15,7 +16,9 @@ export function leagueToStatPath({
   league: League
   stat: Stat
 }) {
-  const common = `/comps/${leagueToLeagueCode(league)}/${stat}/`
+  const statRoute = stat === 'standard' ? 'stats' : stat
+
+  const common = `/comps/${leagueToLeagueCode(league)}/${statRoute}/`
 
   switch (league) {
     case 'Premier League':
@@ -24,6 +27,8 @@ export function leagueToStatPath({
       return common + 'Championship-Stats'
     case 'League 1':
       return common + 'League-One-Stats'
+    case 'La Liga':
+      return common + 'La-Liga-Stats'
   }
 }
 
@@ -35,6 +40,8 @@ function leagueToLeagueCode(league: League): LeagueCode {
       return '10'
     case 'League 1':
       return '15'
+    case 'La Liga':
+      return '12'
   }
 }
 
@@ -79,16 +86,33 @@ export function toFbRefTeam(team: OddsCheckerTeam): Team {
     // League one
     case 'Burton':
       return 'Burton Albion'
+    case 'Cardiff':
+      return 'Cardiff City'
     case 'Exeter':
       return 'Exeter City'
     case 'Lincoln':
       return 'Lincoln City'
+    case 'Luton':
+      return 'Luton Town'
+    case 'Mansfield':
+      return 'Mansfield Town'
     case 'Peterborough United':
       return "P'borough Utd"
     case 'Rotherham':
       return 'Rotherham Utd'
     case 'Wigan':
       return 'Wigan Athletic'
+    // La Liga
+    case 'Alaves':
+      return 'Alavés'
+    case 'Athletic Bilbao':
+      return 'Athletic Club'
+    case 'Atletico Madrid':
+      return 'Atlético Madrid'
+    case 'Real Betis':
+      return 'Betis'
+    case 'Real Mallorca':
+      return 'Mallorca'
     default:
       return team
   }
@@ -123,5 +147,29 @@ export function bettingFieldToStat(field: BettingField): Stat {
       return 'shooting'
     case 'Player Fouls':
       return 'misc'
+  }
+}
+
+export function getColumns({ table, stat }: { table: Table; stat: Stat }) {
+  switch (table) {
+    case 'squad':
+    case 'vsSquad':
+      switch (stat) {
+        case 'standard':
+          return ['Squad', 'MP']
+        case 'shooting':
+          return ['Squad', 'Sh', 'SoT']
+        case 'misc':
+          return ['Squad', 'Fls']
+      }
+    case 'player':
+      switch (stat) {
+        case 'standard':
+          return ['Player', 'Squad', 'MP', 'Starts', 'Min', '90s']
+        case 'shooting':
+          return ['Player', 'Sh', 'SoT']
+        case 'misc':
+          return ['Player', 'Fls']
+      }
   }
 }

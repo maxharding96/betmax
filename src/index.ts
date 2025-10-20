@@ -11,6 +11,7 @@ import type { Odds } from './types/oddsChecker'
 import { getOrCreate } from './utils/common'
 import { bettingFieldToPlayerCol, bettingFieldToTeamCol } from './utils/fbRef'
 import {
+  addEstGameTimeIfStarting,
   getPointOdds,
   getPointProbabilities,
   getTeamMeanStat,
@@ -72,7 +73,6 @@ export function getFieldStatsDf({
   field,
   odds,
   points,
-  stat,
 }: {
   tables: Tables
   homeTeam: Team
@@ -80,7 +80,6 @@ export function getFieldStatsDf({
   field: BettingField
   odds: Odds[]
   points: number[]
-  stat: Stat
 }) {
   const map = createOddsMapping(odds)
   const names = getPlayerNames(odds)
@@ -109,7 +108,6 @@ export function getFieldStatsDf({
     map,
     names,
     points,
-    stat,
   })
 
   const awayDf = getTeamFieldStatsDf({
@@ -120,7 +118,6 @@ export function getFieldStatsDf({
     map,
     names,
     points,
-    stat,
   })
 
   return pl.concat([homeDf, awayDf]).sort('Player')
@@ -134,7 +131,6 @@ function getTeamFieldStatsDf({
   map,
   names,
   points,
-  stat,
 }: {
   playerDf: pl.DataFrame
   team: Team
@@ -143,9 +139,9 @@ function getTeamFieldStatsDf({
   map: OddsMap
   names: string[]
   points: number[]
-  stat: Stat
 }) {
-  const df = getTeamPlayersDf(playerDf, { team, stat })
+  let df = getTeamPlayersDf(playerDf, { team })
+  df = addEstGameTimeIfStarting(df)
 
   const rowsToRemove: number[] = []
 
