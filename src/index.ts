@@ -17,6 +17,7 @@ import {
   getTeamMeanStat,
   getTeamPlayersDf,
   getTeamStat,
+  sortByValue,
 } from './utils/table'
 import { valueOfOdds } from './utils/probabilty'
 import { MAX_PROBABILITY, MIN_VALUE } from './constants'
@@ -122,7 +123,7 @@ export function getFieldStatsDf({
     point,
   })
 
-  return pl.concat([homeDf, awayDf])
+  return sortByValue(pl.concat([homeDf, awayDf]))
 }
 
 function getTeamFieldStatsDf({
