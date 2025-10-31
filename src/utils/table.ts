@@ -223,6 +223,10 @@ export function join(dfs: pl.DataFrame[]) {
 
 export function stack(dfs: pl.DataFrame[]) {
   return dfs.reduce((acc, df) => {
-    return pl.concat([acc, df], { how: 'diagonal' }).sort('Value (%)', true)
+    return sortByValue(pl.concat([acc, df], { how: 'diagonal' }))
   })
+}
+
+export function sortByValue(df: pl.DataFrame) {
+  return df.sort('Value (%)', true)
 }
