@@ -71,6 +71,8 @@ export function toFbRefTeam(team: OddsCheckerTeam): Team {
       return 'Derby County'
     case 'Hull':
       return 'Hull City'
+    case 'Ipswich':
+      return 'Ipswich Town'
     case 'Leicester':
       return 'Leicester City'
     case 'Norwich':
@@ -86,8 +88,6 @@ export function toFbRefTeam(team: OddsCheckerTeam): Team {
     // League one
     case 'Burton':
       return 'Burton Albion'
-    case 'Cardiff':
-      return 'Cardiff City'
     case 'Exeter':
       return 'Exeter City'
     case 'Lincoln':

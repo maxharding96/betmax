@@ -8,9 +8,7 @@ import {
 } from './probabilty'
 import { findBestPlayerMatch } from './common'
 import type { OddsMap } from '../types/internal'
-
-// Player must have played at least 3 games
-const MIN_GAMES = 3
+import { MIN_GAME_STARTED, MIN_GAME_TIME } from '../constants'
 
 export function getTeamStat(
   df: pl.DataFrame,
@@ -72,7 +70,10 @@ export function getTeamPlayersDf(
     pl
       .col('Squad')
       .str.contains(team)
-      .and(pl.col('MP').cast(pl.Float32).gtEq(MIN_GAMES))
+      // Must have played at least MIN_GAME_TIME total
+      .and(pl.col('90s').cast(pl.Float32).gtEq(MIN_GAME_TIME))
+      // Must have started at least MIN_GAME_STARTED games
+      .and(pl.col('Starts').cast(pl.Float32).gt(MIN_GAME_STARTED))
   )
 }
 
@@ -106,7 +107,7 @@ export function getPointProbabilities(
     }
   })
 
-  return pl.Series(`Prob ${col} > ${point}`, probs)
+  return pl.Series('Probability', probs)
 }
 
 export function addEstGameTimeIfStarting(df: pl.DataFrame) {
@@ -135,12 +136,10 @@ export function getPointOdds(
   df: pl.DataFrame,
   {
     point,
-    col,
     map,
     names,
   }: {
     point: number
-    col: PlayerTableCol
     map: OddsMap
     names: string[]
   }
@@ -169,7 +168,7 @@ export function getPointOdds(
     odds.push(o)
   })
 
-  return pl.Series(`Odds ${col} > ${point}`, odds)
+  return pl.Series('Best odds', odds)
 }
 
 export function addPercentageDiff(df: pl.DataFrame) {
@@ -183,12 +182,14 @@ export function addPercentageDiff(df: pl.DataFrame) {
   )
 }
 
-export function saveToXlsx(df: pl.DataFrame) {
+export function saveToXlsx(entries: Array<[string, pl.DataFrame]>) {
   const workbook = xlsx.utils.book_new()
 
-  const data = df.toRecords()
-  const worksheet = xlsx.utils.json_to_sheet(data)
-  xlsx.utils.book_append_sheet(workbook, worksheet, `Results`)
+  for (const [name, df] of entries) {
+    const data = df.toRecords()
+    const worksheet = xlsx.utils.json_to_sheet(data)
+    xlsx.utils.book_append_sheet(workbook, worksheet, name)
+  }
 
   xlsx.writeFile(workbook, 'betmax.xlsx')
 }
@@ -222,6 +223,6 @@ export function join(dfs: pl.DataFrame[]) {
 
 export function stack(dfs: pl.DataFrame[]) {
   return dfs.reduce((acc, df) => {
-    return pl.concat([acc, df], { how: 'diagonal' })
+    return pl.concat([acc, df], { how: 'diagonal' }).sort('Value (%)', true)
   })
 }
