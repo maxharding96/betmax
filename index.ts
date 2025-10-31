@@ -126,7 +126,7 @@ if (fieldToDfs.size) {
 
   for (const [field, dfs] of fieldToDfs) {
     const df = stack(dfs)
-    if (dfs.length === 0) {
+    if (df.height === 0) {
       continue
     }
 
