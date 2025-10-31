@@ -18,6 +18,8 @@ import {
   getTeamPlayersDf,
   getTeamStat,
 } from './utils/table'
+import { valueOfOdds } from './utils/probabilty'
+import { MAX_PROBABILITY, MIN_VALUE } from './constants'
 
 function createOddsMapping(odds: Odds[]): OddsMap {
   const mapping: OddsMap = new Map()
@@ -72,14 +74,14 @@ export function getFieldStatsDf({
   awayTeam,
   field,
   odds,
-  points,
+  point,
 }: {
   tables: Tables
   homeTeam: Team
   awayTeam: Team
   field: BettingField
   odds: Odds[]
-  points: number[]
+  point: number
 }) {
   const map = createOddsMapping(odds)
   const names = getPlayerNames(odds)
@@ -107,7 +109,7 @@ export function getFieldStatsDf({
     weight: homeWeight,
     map,
     names,
-    points,
+    point,
   })
 
   const awayDf = getTeamFieldStatsDf({
@@ -117,10 +119,10 @@ export function getFieldStatsDf({
     weight: awayWeight,
     map,
     names,
-    points,
+    point,
   })
 
-  return pl.concat([homeDf, awayDf]).sort('Player')
+  return pl.concat([homeDf, awayDf])
 }
 
 function getTeamFieldStatsDf({
@@ -130,7 +132,7 @@ function getTeamFieldStatsDf({
   weight,
   map,
   names,
-  points,
+  point,
 }: {
   playerDf: pl.DataFrame
   team: Team
@@ -138,46 +140,47 @@ function getTeamFieldStatsDf({
   weight: number
   map: OddsMap
   names: string[]
-  points: number[]
+  point: number
 }) {
   let df = getTeamPlayersDf(playerDf, { team })
   df = addEstGameTimeIfStarting(df)
 
-  const rowsToRemove: number[] = []
+  const rowsToKeep: number[] = []
 
-  const cols = points
-    .flatMap((point) => {
-      const oddsCol = getPointOdds(df, {
-        point,
-        col,
-        map,
-        names,
-      })
+  const oddsCol = getPointOdds(df, {
+    point,
+    map,
+    names,
+  })
 
-      if (!oddsCol) return
+  // Return empty dataframe
+  if (!oddsCol) return pl.DataFrame()
 
-      const probCol = getPointProbabilities(df, {
-        point,
-        col,
-        weight: weight,
-      })
+  const probCol = getPointProbabilities(df, {
+    point,
+    col,
+    weight: weight,
+  })
 
-      for (let i = 0; i < oddsCol.length; i++) {
-        const odd = oddsCol.get(i)
-        const prob = probCol.get(i)
+  const valueArray: number[] = []
 
-        if (!odd || !prob || prob > odd) {
-          rowsToRemove.push(i)
-        }
-      }
+  for (let i = 0; i < oddsCol.length; i++) {
+    const odd = oddsCol.get(i)
+    const prob = probCol.get(i)
 
-      return [probCol, oddsCol]
-    })
-    .filter((res) => !!res)
+    const value = valueOfOdds({ real: odd, predicted: prob })
+    valueArray.push(value)
+
+    if (odd && prob && prob <= MAX_PROBABILITY && value >= MIN_VALUE) {
+      rowsToKeep.push(i)
+    }
+  }
+
+  const valueCol = pl.Series('Value (%)', valueArray)
 
   return df
-    .withColumns(...cols)
+    .withColumns(oddsCol, probCol, valueCol)
     .withRowCount('row_nr')
-    .filter(pl.col('row_nr').isIn(rowsToRemove).not())
+    .filter(pl.col('row_nr').isIn(rowsToKeep))
     .drop('row_nr')
 }

@@ -7,7 +7,9 @@ export function poissonPMF(k: number, rate: number, weight: number): number {
   const lambda = rate * weight
 
   if (lambda <= 0) {
-    throw new Error('lambda must be positive')
+    return 0
+
+    // throw new Error('lambda must be positive')
   }
 
   return (Math.pow(lambda, k) * Math.exp(-lambda)) / factorial(k)
@@ -74,4 +76,14 @@ export function estGamePlayedWhenStarting({
   const avgMinWhenStarting = totalMinWhenStarting / starts
 
   return roundToTwo(Math.min(avgMinWhenStarting / 90, 1))
+}
+
+export function valueOfOdds({
+  predicted,
+  real,
+}: {
+  predicted: number
+  real: number
+}) {
+  return roundToTwo(real / predicted - 1) * 100
 }
