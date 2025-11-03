@@ -3,7 +3,7 @@ A CLI tool that helps you find value bets in football player markets by combinin
 
 The tool scrapes football statistics for players, calculates probabilities for specific markets based on their performance data, then compares these calculated probabilities against current bookmaker odds. It identifies discrepancies where the statistical probability suggests better value than the odds imply, and generates a spreadsheet showing the best value betting opportunities.
 
-Built with Node.js and uses an interactive CLI to guide you through selecting leagues, fixtures and markets to analyze.
+Built with Typescript and uses an interactive CLI to guide you through selecting leagues, fixtures and markets to analyze.
 
 ### **Quick start**
 ```
@@ -22,12 +22,14 @@ bun start
 
 **1. Make your choices in the terminal**
 
-![output](https://github.com/user-attachments/assets/e3cbd466-2189-4698-8d34-9cd49471655f)
+![demo](https://github.com/user-attachments/assets/cbfafb23-7fcc-457a-adee-27fa471cf07f)
 
 **2. Get your custom spreadsheet**
 
-<img width="673" height="311" alt="Screenshot 2025-10-18 at 16 45 54" src="https://github.com/user-attachments/assets/88f16bab-705c-4b91-ab01-b2fc650f5b3c" />
+<img width="936" height="342" alt="output" src="https://github.com/user-attachments/assets/2dbb4e2d-3255-4bef-94ca-904c666d3756" />
 
-**Prob** is the calculated probabilty that the event will happen.
+**Est. play time** is the estimated % of a game a player will play if they start.<br/>
+**Best odds** is the best odds found via [OddsChecker](https://www.oddschecker.com/) on event happening.<br/>
+**Probability** is the calculated probabilty that the event will happen.<br/>
+**Value** is the estimated value (EV) of the bet.
 
-**Odd** is the best odds found via [OddsChecker](https://www.oddschecker.com/) on event happening.
