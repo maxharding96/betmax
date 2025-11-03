@@ -15,7 +15,7 @@ export function leagueToStatPath({
 }: {
   league: League
   stat: Stat
-}) {
+}): string {
   const statRoute = stat === 'standard' ? 'stats' : stat
 
   const common = `/comps/${leagueToLeagueCode(league)}/${statRoute}/`
@@ -29,6 +29,8 @@ export function leagueToStatPath({
       return common + 'League-One-Stats'
     case 'La Liga':
       return common + 'La-Liga-Stats'
+    case 'Seria A':
+      return common + 'Seria-A-Stats'
   }
 }
 
@@ -42,6 +44,8 @@ function leagueToLeagueCode(league: League): LeagueCode {
       return '15'
     case 'La Liga':
       return '12'
+    case 'Seria A':
+      return '11'
   }
 }
 
@@ -113,6 +117,13 @@ export function toFbRefTeam(team: OddsCheckerTeam): Team {
       return 'Betis'
     case 'Real Mallorca':
       return 'Mallorca'
+    // Seria A
+    case 'AC Milan':
+      return 'Milan'
+    case 'Inter Milan':
+      return 'Inter'
+    case 'Verona':
+      return 'Hellas Verona'
     default:
       return team
   }

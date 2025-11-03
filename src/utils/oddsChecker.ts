@@ -12,6 +12,8 @@ export function leagueToPath(league: League): string {
       return '/english/league-1'
     case 'La Liga':
       return '/spain/la-liga-primera'
+    case 'Seria A':
+      return '/italy/serie-a'
   }
 }
 
