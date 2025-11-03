@@ -1,4 +1,4 @@
-# betmax
+# Betmax
 A CLI tool that helps you find value bets in football player markets by combining statistical analysis with real-time odds data.
 
 The tool scrapes football statistics for players, calculates probabilities for specific markets based on their performance data, then compares these calculated probabilities against current bookmaker odds. It identifies discrepancies where the statistical probability suggests better value than the odds imply, and generates a spreadsheet showing the best value betting opportunities.
@@ -15,7 +15,7 @@ cd betmax
 bun install
 
 # run script
-bun run
+bun start
 ```
 
 ### Usage
