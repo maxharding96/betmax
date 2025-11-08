@@ -11,7 +11,6 @@ import type { Odds } from './types/oddsChecker'
 import { getOrCreate } from './utils/common'
 import { bettingFieldToPlayerCol, bettingFieldToTeamCol } from './utils/fbRef'
 import {
-  addEstGameTimeIfStarting,
   getPointOdds,
   getPointProbabilities,
   getTeamMeanStat,
@@ -143,8 +142,7 @@ function getTeamFieldStatsDf({
   names: string[]
   point: number
 }) {
-  let df = getTeamPlayersDf(playerDf, { team })
-  df = addEstGameTimeIfStarting(df)
+  const df = getTeamPlayersDf(playerDf, { team })
 
   const rowsToKeep: number[] = []
 

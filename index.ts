@@ -1,5 +1,5 @@
 import { FbRefClient, OddsCheckerClient } from './src/clients'
-import { saveToXlsx, stack } from './src/utils/table'
+import { join, saveToXlsx, stack } from './src/utils/table'
 import pl from 'nodejs-polars'
 import {
   leagueEnum,
@@ -19,10 +19,10 @@ import { appendOrCreate } from './src/utils/common'
 
 chromium.use(StealthPlugin())
 
-const browser = await chromium.launch({ headless: true })
+const browser = await chromium.launch({ headless: false })
 
-const fbRefClient = new FbRefClient(browser)
 const oddsCheckerClient = new OddsCheckerClient(browser)
+const fbRefClient = new FbRefClient(browser)
 
 const league = await select<League>({
   message: 'Which league would you like?',
@@ -71,7 +71,15 @@ const points = await checkbox<string>({
 const statToTables = new Map<Stat, Tables>()
 const fieldToDfs = new Map<string, pl.DataFrame[]>()
 
-const playerPlayedTable = await fbRefClient.getPlayerPlayedTable({ league })
+const { player: playerStandard } = await fbRefClient.getStatTables({
+  league,
+  stat: 'standard',
+})
+
+const { player: playerPlayingTime } = await fbRefClient.getStatTables({
+  league,
+  stat: 'playingtime',
+})
 
 for (const fixture of fixtures) {
   console.log(chalk.blue.bold(`🧮 Calculating odds for ${fixture}...`))
@@ -98,8 +106,16 @@ for (const fixture of fixtures) {
       tables = await fbRefClient.getStatTables({
         league,
         stat,
-        playerPlayedTable,
       })
+
+      //TODO don't like this being here
+      const playerTable = join([
+        playerStandard,
+        playerPlayingTime,
+        tables.player,
+      ])
+
+      tables = { ...tables, player: playerTable }
 
       statToTables.set(stat, tables)
     }

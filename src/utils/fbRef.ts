@@ -161,6 +161,8 @@ export function getColumns({ table, stat }: { table: Table; stat: Stat }) {
           return ['Squad', 'Sh', 'SoT']
         case 'misc':
           return ['Squad', 'Fls']
+        case 'playingtime':
+          return ['Squad', 'Mn/Start']
       }
     case 'player':
       switch (stat) {
@@ -170,6 +172,27 @@ export function getColumns({ table, stat }: { table: Table; stat: Stat }) {
           return ['Player', 'Gls', 'Sh', 'Sh/90', 'SoT', 'SoT/90']
         case 'misc':
           return ['Player', 'CrdY', 'CrdR', 'TklW', 'Fls']
+        case 'playingtime':
+          return ['Player', 'Mn/Start']
       }
+  }
+}
+
+export function getTableId({
+  table,
+  stat,
+}: {
+  table: Table
+  stat: Stat
+}): string {
+  const statId = stat !== 'playingtime' ? stat : 'playing_time'
+
+  switch (table) {
+    case 'player':
+      return `stats_${statId}`
+    case 'squad':
+      return `stats_squads_${statId}_for`
+    case 'vsSquad':
+      return `stats_squads_${statId}_against`
   }
 }

@@ -90,10 +90,10 @@ export function getPointProbabilities(
   }
 ) {
   const stats = df
-    .getColumn(col)
+    .getColumn(col) // stat total count
     .cast(pl.Float32)
-    .div(df.getColumn('90s').cast(pl.Float32))
-    .mul(df.getColumn('Est. play time'))
+    .div(df.getColumn('90s').cast(pl.Float32)) // divided by time played
+    .mul(df.getColumn('Mn/Start')) // multipled by average time played when starting
     .toArray()
 
   const probs: (number | null)[] = []
@@ -108,28 +108,6 @@ export function getPointProbabilities(
   })
 
   return pl.Series('Probability', probs)
-}
-
-export function addEstGameTimeIfStarting(df: pl.DataFrame) {
-  const estimates: number[] = []
-
-  const records = df.toRecords()
-  for (const row of records) {
-    const matchesPlayed = parseFloat(String(row['MP']))
-    const minutesPlayed = parseFloat(String(row['Min']))
-    const starts = parseFloat(String(row['Starts']))
-
-    const est = estGamePlayedWhenStarting({
-      matchesPlayed,
-      minutesPlayed,
-      starts,
-    })
-
-    estimates.push(est)
-  }
-
-  const series = pl.Series('Est. play time', estimates)
-  return df.withColumn(series)
 }
 
 export function getPointOdds(

@@ -112,7 +112,7 @@ const seasonEnum = z.enum(['2025-2026', '2024-2025', '2023-2024'])
 
 export type Season = z.infer<typeof seasonEnum>
 
-const statEnum = z.enum(['shooting', 'misc', 'standard'])
+const statEnum = z.enum(['shooting', 'misc', 'standard', 'playingtime'])
 
 export type Stat = z.infer<typeof statEnum>
 
@@ -174,12 +174,9 @@ export type GetPlayerPlayedTableInput = z.infer<
   typeof getPlayerPlayedTableInputSchema
 >
 
-const df = z.custom<pl.DataFrame>((data) => data instanceof pl.DataFrame)
-
 const getStatTablesInputSchema = z.object({
   league: leagueEnum,
   stat: statEnum,
-  playerPlayedTable: df,
 })
 
 export type GetStatTablesInput = z.infer<typeof getStatTablesInputSchema>

@@ -1,13 +1,8 @@
-import type {
-  GetStatTablesInput,
-  Tables,
-  GetPlayerPlayedTableInput,
-} from '../types/fbRef'
+import type { GetStatTablesInput, Tables, Table, Stat } from '../types/fbRef'
 import { type Browser } from 'playwright'
 import pl from 'nodejs-polars'
-import { getColumns, leagueToStatPath } from '../utils/fbRef'
+import { getColumns, getTableId, leagueToStatPath } from '../utils/fbRef'
 import { Scraper } from './scraper'
-import { join } from '../utils/table'
 
 export class FbRefClient extends Scraper {
   constructor(browser: Browser) {
@@ -17,106 +12,67 @@ export class FbRefClient extends Scraper {
     })
   }
 
-  async getPlayerPlayedTable(
-    input: GetPlayerPlayedTableInput
-  ): Promise<pl.DataFrame> {
-    const { league } = input
-
-    const url = this.baseUrl + leagueToStatPath({ league, stat: 'standard' })
-
-    const dfs = await this.getTables(url)
-
-    const table = dfs.pop()
-    if (!table) {
-      throw new Error('Player table not found')
-    }
-    return table.select(...getColumns({ table: 'player', stat: 'standard' }))
-  }
-
   async getStatTables(input: GetStatTablesInput): Promise<Tables> {
-    const { league, stat, playerPlayedTable } = input
+    const { league, stat } = input
 
+    const page = await this.getPage()
     const url = this.baseUrl + leagueToStatPath({ league, stat })
+    await page.goto(url, { waitUntil: 'domcontentloaded' })
 
-    const dfs = await this.getTables(url)
+    const player = await this.getTable({
+      table: 'player',
+      stat,
+    })
 
-    let playerTable = dfs.pop()
+    const squad = await this.getTable({
+      table: 'squad',
+      stat,
+    })
 
-    if (!playerTable) {
-      throw new Error('Player table not found')
-    }
-
-    playerTable = playerTable.select(...getColumns({ table: 'player', stat }))
-    playerTable = join([playerPlayedTable, playerTable])
-
-    let vsSquadTable = dfs.pop()
-    if (!vsSquadTable) {
-      throw new Error('vsSquad table not found')
-    }
-    vsSquadTable.select(...getColumns({ table: 'vsSquad', stat }))
-
-    let squadTable = dfs.pop()
-    if (!squadTable) {
-      throw new Error('Squad table not found')
-    }
-    squadTable.select(...getColumns({ table: 'squad', stat }))
+    const vsSquad = await this.getTable({
+      table: 'vsSquad',
+      stat,
+    })
 
     return {
-      squad: squadTable,
-      vsSquad: vsSquadTable,
-      player: playerTable,
+      player,
+      squad,
+      vsSquad,
     }
   }
 
-  private async getTables(url: string) {
-    const page = await this.getPage()
-    await page.goto(url, { waitUntil: 'networkidle' })
-
-    const showHiddenButton = page.locator(`button:has-text("Show hidden rows")`)
-    const showHiddenButtonCount = await showHiddenButton.count()
-    if (showHiddenButtonCount === 1) {
-      await showHiddenButton.press('Enter')
+  private async getTable({ table, stat }: { table: Table; stat: Stat }) {
+    if (!this.page) {
+      throw Error('Tried to get table before page was loaded')
     }
 
-    const locators = page.locator('table')
-    const count = await locators.count()
+    const id = getTableId({ table, stat })
+    const loc = this.page.locator(`table#${id}`)
+    const tb = loc.nth(0)
 
-    const tableData = []
-
-    for (let i = count - 3; i <= count; i++) {
-      const table = locators.nth(i - 1)
-
-      const data = await table.evaluate((t) => {
-        const rows = Array.from(t.querySelectorAll('tr'))
-        return rows.map((row) => {
-          const cells = Array.from(row.querySelectorAll('th, td'))
-          return cells.map((cell) =>
-            cell.textContent ? cell.textContent.trim() : ''
-          )
-        })
+    const data = await tb.evaluate((t) => {
+      const rows = Array.from(t.querySelectorAll('tr'))
+      return rows.map((row) => {
+        const cells = Array.from(row.querySelectorAll('th, td'))
+        return cells.map((cell) =>
+          cell.textContent ? cell.textContent.trim() : ''
+        )
       })
+    })
 
-      tableData.push(data)
-    }
+    const header = data[1]
+    const rows = data.slice(2)
 
-    const dfs = []
-
-    for (const td of tableData) {
-      const header = td[1]
-      const rows = td.slice(2)
-
-      const arrayOfObjects: Record<string, string>[] = rows.map((row) => {
-        const obj: Record<string, string> = {}
-        header.forEach((key, i) => {
-          obj[key] = row[i]
-        })
-        return obj
+    const arrayOfObjects: Record<string, string>[] = rows.map((row) => {
+      const obj: Record<string, string> = {}
+      header.forEach((key, i) => {
+        obj[key] = row[i]
       })
+      return obj
+    })
 
-      const df = pl.DataFrame(arrayOfObjects)
-      dfs.push(df)
-    }
+    const df = pl.DataFrame(arrayOfObjects)
 
-    return dfs
+    return df.select(...getColumns({ table, stat }))
   }
 }
