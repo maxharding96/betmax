@@ -48,7 +48,8 @@ export function poissonGreaterOrEqual(
 
 export function oddsOfProbability(probability: number) {
   if (probability <= 0 || probability >= 1) {
-    throw new Error('Probability must be between 0 and 1 (exclusive)')
+    // throw new Error('Probability must be between 0 and 1 (exclusive)')
+    return 0
   }
 
   return roundToTwo(1 / probability)

@@ -93,7 +93,8 @@ export function getPointProbabilities(
     .getColumn(col) // stat total count
     .cast(pl.Float32)
     .div(df.getColumn('90s').cast(pl.Float32)) // divided by time played
-    .mul(df.getColumn('Mn/Start')) // multipled by average time played when starting
+    .mul(df.getColumn('Mn/Start').cast(pl.Int32)) // multipled by average time played when starting
+    .div(90)
     .toArray()
 
   const probs: (number | null)[] = []
