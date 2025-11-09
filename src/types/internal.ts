@@ -5,6 +5,7 @@ export const leagueEnum = z.enum([
   'Championship',
   'League 1',
   'La Liga',
+  'Scottish Premier League',
 ])
 
 export type League = z.infer<typeof leagueEnum>

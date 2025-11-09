@@ -95,6 +95,19 @@ export const teamEnum = z.enum([
   'Sevilla',
   'Valencia',
   'Villarreal',
+  // SPL
+  'Hearts',
+  'Celtic',
+  'Hibernian',
+  'Falkirk',
+  'Rangers',
+  'Motherwell',
+  'Dundee United',
+  'Aberdeen',
+  'Kilmarnock',
+  'St Mirren',
+  'Dundee',
+  'Livingston',
 ])
 
 export type Team = z.infer<typeof teamEnum>
@@ -104,6 +117,7 @@ const leagueCodeEnum = z.enum([
   '10', // Championship
   '15', // League 1
   '12', // La Liga
+  '40', // SPL
 ])
 
 export type LeagueCode = z.infer<typeof leagueCodeEnum>

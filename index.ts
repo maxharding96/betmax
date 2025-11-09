@@ -19,7 +19,7 @@ import { appendOrCreate } from './src/utils/common'
 
 chromium.use(StealthPlugin())
 
-const browser = await chromium.launch({ headless: false })
+const browser = await chromium.launch({ headless: true })
 
 const oddsCheckerClient = new OddsCheckerClient(browser)
 const fbRefClient = new FbRefClient(browser)

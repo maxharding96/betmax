@@ -9,13 +9,31 @@ import type {
 import type { BettingField, League } from '../types/internal'
 import type { Team as OddsCheckerTeam } from '../types/oddsChecker'
 
+// https://fbref.com/en/squads/e4a775cb/2025-2026/matchlogs/c9/shooting/Nottingham-Forest-Match-Logs-Premier-League
+
+export function getTeamMatchStatPath({
+  league,
+  team,
+  teamId,
+  stat,
+}: {
+  league: string
+  team: string
+  teamId: string
+  stat: Stat
+}) {
+  const statRoute = stat === 'standard' ? 'stats' : stat
+
+  return `/squads/${teamId}/2025-2026/matchlogs/c9/${stat}/$`
+}
+
 export function leagueToStatPath({
   league,
   stat,
 }: {
   league: League
   stat: Stat
-}) {
+}): string {
   const statRoute = stat === 'standard' ? 'stats' : stat
 
   const common = `/comps/${leagueToLeagueCode(league)}/${statRoute}/`
@@ -29,6 +47,8 @@ export function leagueToStatPath({
       return common + 'League-One-Stats'
     case 'La Liga':
       return common + 'La-Liga-Stats'
+    case 'Scottish Premier League':
+      return common + 'Scottish-Premiership-Stats'
   }
 }
 
@@ -42,6 +62,8 @@ function leagueToLeagueCode(league: League): LeagueCode {
       return '15'
     case 'La Liga':
       return '12'
+    case 'Scottish Premier League':
+      return '40'
   }
 }
 
@@ -113,6 +135,9 @@ export function toFbRefTeam(team: OddsCheckerTeam): Team {
       return 'Betis'
     case 'Real Mallorca':
       return 'Mallorca'
+    // SPL
+    case 'Dundee Utd':
+      return 'Dundee United'
     default:
       return team
   }
