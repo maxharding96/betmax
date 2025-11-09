@@ -8,6 +8,21 @@ import type {
 } from '../types/fbRef'
 import type { BettingField, League } from '../types/internal'
 import type { Team as OddsCheckerTeam } from '../types/oddsChecker'
+import { slugify } from './common'
+
+// https://fbref.com/en/players/de31038e/matchlogs/2025-2026/c9/Elliot-Anderson-Match-Logs
+
+export function getPlayerStatMatchLogsPath({
+  playerId,
+  player,
+}: {
+  playerId: string
+  player: string
+}) {
+  return `/players/${playerId}/matchlogs/2025-2026/c9/${slugify(
+    player
+  )}-Match-Logs`
+}
 
 // https://fbref.com/en/squads/e4a775cb/2025-2026/matchlogs/c9/shooting/Nottingham-Forest-Match-Logs-Premier-League
 
@@ -24,7 +39,9 @@ export function getTeamMatchStatPath({
 }) {
   const statRoute = stat === 'standard' ? 'stats' : stat
 
-  return `/squads/${teamId}/2025-2026/matchlogs/c9/${stat}/$`
+  return `/squads/${teamId}/2025-2026/matchlogs/c9/${statRoute}/${slugify(
+    team
+  )}-Match-Logs-${slugify(league)}`
 }
 
 export function leagueToStatPath({
@@ -49,6 +66,8 @@ export function leagueToStatPath({
       return common + 'La-Liga-Stats'
     case 'Scottish Premier League':
       return common + 'Scottish-Premiership-Stats'
+    case 'Bundesliga':
+      return common + 'Bundesliga-Stats'
   }
 }
 
@@ -64,6 +83,8 @@ function leagueToLeagueCode(league: League): LeagueCode {
       return '12'
     case 'Scottish Premier League':
       return '40'
+    case 'Bundesliga':
+      return '20'
   }
 }
 
@@ -138,6 +159,28 @@ export function toFbRefTeam(team: OddsCheckerTeam): Team {
     // SPL
     case 'Dundee Utd':
       return 'Dundee United'
+    case 'Mainz':
+      return 'Mainz 05'
+    case 'TSG Hoffenheim':
+      return 'Hoffenheim'
+    case 'Hamburg':
+      return 'Hamburger SV'
+    case 'SC Freiburg':
+      return 'Freiburg'
+    case 'Borussia Dortmund':
+      return 'Dortmund'
+    case 'Vfb Stuttgart':
+      return 'Stuttgart'
+    case 'Borussia Mgladbach':
+      return 'Gladbach'
+    case 'Bayer Leverkusen':
+      return 'Leverkusen'
+    case 'Cologne':
+      return 'Köln'
+    case 'Eintracht Frankfurt':
+      return 'Eint Frankfurt'
+    case 'St Pauli':
+      return 'St. Pauli'
     default:
       return team
   }

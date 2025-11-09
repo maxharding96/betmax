@@ -41,6 +41,7 @@ export class OddsCheckerClient extends Scraper {
       case 'League 1':
       case 'La Liga':
       case 'Scottish Premier League':
+      case 'Bundesliga':
         locator = page.locator('p.fixtures-bet-name.beta-footnote')
     }
 

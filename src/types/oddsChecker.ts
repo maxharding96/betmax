@@ -113,6 +113,25 @@ export const teamEnum = z.enum([
   'St Mirren',
   'Dundee',
   'Livingston',
+  // Bundesliga
+  'Mainz',
+  'TSG Hoffenheim',
+  'Augsburg',
+  'Hamburg',
+  'Bayern Munich',
+  'SC Freiburg',
+  'Borussia Dortmund',
+  'Vfb Stuttgart',
+  'Heidenheim',
+  'Borussia Mgladbach',
+  'Wolfsburg',
+  'Bayer Leverkusen',
+  'Cologne',
+  'Eintracht Frankfurt',
+  'RB Leipzig',
+  'Werder Bremen',
+  'St Pauli',
+  'Union Berlin',
 ])
 
 export type Team = z.infer<typeof teamEnum>
