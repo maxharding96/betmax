@@ -1,6 +1,6 @@
 import pl from 'nodejs-polars'
 import xlsx from 'xlsx'
-import type { SquadTableCol, PlayerTableCol, Team, Stat } from '../types/fbRef'
+import type { SquadTableCol, PlayerTableCol, Team } from '../types/fbRef'
 import {
   estGamePlayedWhenStarting,
   oddsOfProbability,

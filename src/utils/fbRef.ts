@@ -68,6 +68,8 @@ export function leagueToStatPath({
       return common + 'Scottish-Premiership-Stats'
     case 'Bundesliga':
       return common + 'Bundesliga-Stats'
+    case 'Seria A':
+      return common + 'Seria-A-Stats'
   }
 }
 
@@ -85,6 +87,8 @@ function leagueToLeagueCode(league: League): LeagueCode {
       return '40'
     case 'Bundesliga':
       return '20'
+    case 'Seria A':
+      return '11'
   }
 }
 
@@ -181,6 +185,13 @@ export function toFbRefTeam(team: OddsCheckerTeam): Team {
       return 'Eint Frankfurt'
     case 'St Pauli':
       return 'St. Pauli'
+    // Seria A
+    case 'AC Milan':
+      return 'Milan'
+    case 'Inter Milan':
+      return 'Inter'
+    case 'Verona':
+      return 'Hellas Verona'
     default:
       return team
   }

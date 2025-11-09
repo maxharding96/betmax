@@ -127,6 +127,27 @@ export const teamEnum = z.enum([
   'St. Pauli',
   'Mainz 05',
   'Heidenheim',
+  // Seria A
+  'Atalanta',
+  'Bologna',
+  'Cagliari',
+  'Como',
+  'Cremonese',
+  'Fiorentina',
+  'Genoa',
+  'Hellas Verona',
+  'Inter',
+  'Juventus',
+  'Lazio',
+  'Lecce',
+  'Milan',
+  'Napoli',
+  'Parma',
+  'Pisa',
+  'Roma',
+  'Sassuolo',
+  'Torino',
+  'Udinese',
 ])
 
 export type Team = z.infer<typeof teamEnum>
@@ -138,6 +159,7 @@ const leagueCodeEnum = z.enum([
   '12', // La Liga
   '40', // SPL
   '20', // Bundesliga
+  '11', // Seria A
 ])
 
 export type LeagueCode = z.infer<typeof leagueCodeEnum>
