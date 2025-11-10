@@ -177,9 +177,11 @@ function getTeamFieldStatsDf({
 
   const valueCol = pl.Series('Value (%)', valueArray)
 
-  return df
+  const filtered = df
     .withColumns(oddsCol, probCol, valueCol)
     .withRowCount('row_nr')
     .filter(pl.col('row_nr').isIn(rowsToKeep))
     .drop('row_nr')
+
+  return filtered
 }

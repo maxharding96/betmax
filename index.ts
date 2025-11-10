@@ -76,6 +76,19 @@ const { player: playerStandard } = await fbRefClient.getStatTables({
   stat: 'standard',
 })
 
+for (const row of playerStandard.toRecords()) {
+  const playerId = row.ID as string
+  const player = row.Player as string
+
+  console.log(playerId, player)
+
+  const logs = await fbRefClient.getPlayerMatchLogs({ playerId, player })
+
+  console.log(logs.head().toString())
+
+  break
+}
+
 const { player: playerPlayingTime } = await fbRefClient.getStatTables({
   league,
   stat: 'playingtime',
@@ -145,6 +158,19 @@ if (fieldToDfs.size) {
     if (df.height === 0) {
       continue
     }
+
+    // for (const row of df.toRecords()) {
+    //   const playerId = row.ID as string
+    //   const player = row.player as string
+
+    //   console.log(playerId, player)
+
+    //   const logs = await fbRefClient.getPlayerMatchLogs({ playerId, player })
+
+    //   console.log(logs.head().toString())
+
+    //   break
+    // }
 
     entries.push([field, df])
   }

@@ -246,7 +246,7 @@ export function getColumns({ table, stat }: { table: Table; stat: Stat }) {
     case 'player':
       switch (stat) {
         case 'standard':
-          return ['Player', 'Squad', 'MP', 'Starts', 'Min', '90s']
+          return ['ID', 'Player', 'Squad', 'MP', 'Starts', 'Min', '90s']
         case 'shooting':
           return ['Player', 'Gls', 'Sh', 'Sh/90', 'SoT', 'SoT/90']
         case 'misc':
