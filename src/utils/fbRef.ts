@@ -15,11 +15,13 @@ import { slugify } from './common'
 export function getPlayerStatMatchLogsPath({
   playerId,
   player,
+  leagueCode,
 }: {
   playerId: string
   player: string
+  leagueCode: LeagueCode
 }) {
-  return `/players/${playerId}/matchlogs/2025-2026/c9/${slugify(
+  return `/players/${playerId}/matchlogs/2025-2026/c${leagueCode}/${slugify(
     player
   )}-Match-Logs`
 }
@@ -73,7 +75,7 @@ export function leagueToStatPath({
   }
 }
 
-function leagueToLeagueCode(league: League): LeagueCode {
+export function leagueToLeagueCode(league: League): LeagueCode {
   switch (league) {
     case 'Premier League':
       return '9'

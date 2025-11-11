@@ -1,4 +1,10 @@
-import type { GetStatTablesInput, Tables, Table, Stat } from '../types/fbRef'
+import type {
+  GetStatTablesInput,
+  Tables,
+  Table,
+  Stat,
+  LeagueCode,
+} from '../types/fbRef'
 import { type Browser } from 'playwright'
 import pl from 'nodejs-polars'
 import {
@@ -8,6 +14,8 @@ import {
   leagueToStatPath,
 } from '../utils/fbRef'
 import { Scraper } from './scraper'
+import type { League } from '@/types/internal'
+import { join } from '@/utils/table'
 
 export class FbRefClient extends Scraper {
   constructor(browser: Browser) {
@@ -20,13 +28,17 @@ export class FbRefClient extends Scraper {
   async getPlayerMatchLogs({
     playerId,
     player,
+    leagueCode,
   }: {
     playerId: string
     player: string
+    leagueCode: LeagueCode
   }): Promise<pl.DataFrame> {
     const page = await this.getPage()
 
-    const url = this.baseUrl + getPlayerStatMatchLogsPath({ playerId, player })
+    const url =
+      this.baseUrl +
+      getPlayerStatMatchLogsPath({ playerId, player, leagueCode })
     await page.goto(url, { waitUntil: 'domcontentloaded' })
 
     const logs = await this.getTable({
@@ -34,6 +46,24 @@ export class FbRefClient extends Scraper {
     })
 
     return logs
+  }
+
+  async getBasePlayerTable({
+    league,
+  }: {
+    league: League
+  }): Promise<pl.DataFrame> {
+    const { player: playerStandard } = await this.getStatTables({
+      league,
+      stat: 'standard',
+    })
+
+    const { player: playerPlayingTime } = await this.getStatTables({
+      league,
+      stat: 'playingtime',
+    })
+
+    return join([playerStandard, playerPlayingTime])
   }
 
   async getStatTables(input: GetStatTablesInput): Promise<Tables> {

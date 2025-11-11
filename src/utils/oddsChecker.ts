@@ -28,3 +28,14 @@ export function matchToPath(match: Match) {
 
   return `${base}/${home}-v-${away}/winner`
 }
+
+export function createFixtureToMatchMap(matches: Match[]) {
+  const fixtureToMatch = new Map<string, Match>()
+
+  for (const match of matches) {
+    const fixture = `${match.home} vs. ${match.away}`
+    fixtureToMatch.set(fixture, match)
+  }
+
+  return fixtureToMatch
+}

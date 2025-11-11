@@ -48,36 +48,10 @@ export function poissonGreaterOrEqual(
 
 export function oddsOfProbability(probability: number) {
   if (probability <= 0 || probability >= 1) {
-    //TODO why is this erroring?
-    // throw new Error('Probability must be between 0 and 1 (exclusive)')
     return 0
   }
 
   return roundToTwo(1 / probability)
-}
-
-export function estGamePlayedWhenStarting({
-  matchesPlayed,
-  minutesPlayed,
-  starts,
-}: {
-  matchesPlayed: number
-  minutesPlayed: number
-  starts: number
-}) {
-  if (starts === 0) {
-    return 1
-  }
-
-  // Most subs happen between the 60th and 85th minute
-  const AVERAGE_SUB_MINS = 17.5
-
-  const totalMinWhenStarting =
-    minutesPlayed - (matchesPlayed - starts) * AVERAGE_SUB_MINS
-
-  const avgMinWhenStarting = totalMinWhenStarting / starts
-
-  return roundToTwo(Math.min(avgMinWhenStarting / 90, 1))
 }
 
 export function valueOfOdds({

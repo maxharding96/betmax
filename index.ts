@@ -1,41 +1,39 @@
 import { FbRefClient, OddsCheckerClient } from './src/clients'
 import { join, saveToXlsx, stack } from './src/utils/table'
 import pl from 'nodejs-polars'
-import {
-  leagueEnum,
-  type League,
-  bettingFieldEnum,
-  type BettingField,
-} from './src/types/internal'
 import { bettingFieldToStat, toFbRefTeam } from './src/utils/fbRef'
-import { chromium } from 'playwright-extra'
-import StealthPlugin from 'puppeteer-extra-plugin-stealth'
-import { select, checkbox } from '@inquirer/prompts'
-import { getFieldStatsDf } from './src'
+import { addPlayerHitRates, getFieldStatsDf } from '@/core/data'
 import type { Stat, Tables } from './src/types/fbRef'
-import type { Match } from './src/types/oddsChecker'
 import chalk from 'chalk'
 import { appendOrCreate } from './src/utils/common'
+import { getBrowser } from '@/core/web'
+import {
+  selectFields,
+  selectFixtures,
+  selectLeague,
+  selectPoints,
+} from '@/core/input'
+import { createFixtureToMatchMap } from '@/utils/oddsChecker'
 
-chromium.use(StealthPlugin())
+// Cache
+const statToTables = new Map<Stat, Tables>()
+const fieldToDfs = new Map<string, pl.DataFrame[]>()
 
-const browser = await chromium.launch({ headless: true })
+// Load browser
+const browser = await getBrowser({ headless: true })
 
+// Scrape clients
 const oddsCheckerClient = new OddsCheckerClient(browser)
 const fbRefClient = new FbRefClient(browser)
 
-const league = await select<League>({
-  message: 'Which league would you like?',
-  choices: leagueEnum.options,
-})
+// Select inputs
+const league = await selectLeague()
 
 console.log(chalk.green.bold('⚽ Fetching matches...'))
 
 const { matches } = await oddsCheckerClient.getMatches({
   league,
 })
-
-const fixtureToMatch = new Map<string, Match>()
 
 if (!matches.length) {
   console.log(
@@ -45,54 +43,13 @@ if (!matches.length) {
   )
 }
 
-for (const match of matches) {
-  const fixture = `${match.home} vs. ${match.away}`
-  fixtureToMatch.set(fixture, match)
-}
+const fixtureToMatch = createFixtureToMatchMap(matches)
 
-const fixtures = await checkbox<string>({
-  message: 'Which matches do you want to look at?',
-  choices: [...fixtureToMatch.keys()],
-  required: true,
-})
+const fixtures = await selectFixtures([...fixtureToMatch.keys()])
+const fields = await selectFields()
+const points = await selectPoints()
 
-const fields = await checkbox<BettingField>({
-  message: 'Which betting fields do you want?',
-  choices: bettingFieldEnum.options,
-  required: true,
-})
-
-const points = await checkbox<string>({
-  message: 'Which points do you want to consider?',
-  choices: ['0.5', '1.5', '2.5'],
-  required: true,
-}).then((ps) => ps.map(parseFloat))
-
-const statToTables = new Map<Stat, Tables>()
-const fieldToDfs = new Map<string, pl.DataFrame[]>()
-
-const { player: playerStandard } = await fbRefClient.getStatTables({
-  league,
-  stat: 'standard',
-})
-
-for (const row of playerStandard.toRecords()) {
-  const playerId = row.ID as string
-  const player = row.Player as string
-
-  console.log(playerId, player)
-
-  const logs = await fbRefClient.getPlayerMatchLogs({ playerId, player })
-
-  console.log(logs.head().toString())
-
-  break
-}
-
-const { player: playerPlayingTime } = await fbRefClient.getStatTables({
-  league,
-  stat: 'playingtime',
-})
+const basePlayerTable = await fbRefClient.getBasePlayerTable({ league })
 
 for (const fixture of fixtures) {
   console.log(chalk.blue.bold(`🧮 Calculating odds for ${fixture}...`))
@@ -116,31 +73,35 @@ for (const fixture of fixtures) {
     let tables = statToTables.get(stat)
 
     if (!tables) {
-      tables = await fbRefClient.getStatTables({
+      const { player, ...rest } = await fbRefClient.getStatTables({
         league,
         stat,
       })
 
-      //TODO don't like this being here
-      const playerTable = join([
-        playerStandard,
-        playerPlayingTime,
-        tables.player,
-      ])
-
-      tables = { ...tables, player: playerTable }
+      tables = {
+        ...rest,
+        player: join([basePlayerTable, player]),
+      }
 
       statToTables.set(stat, tables)
     }
 
     for (const point of points) {
-      const df = getFieldStatsDf({
+      let df = getFieldStatsDf({
         tables,
         homeTeam: toFbRefTeam(match.home),
         awayTeam: toFbRefTeam(match.away),
         odds,
         field,
         point,
+      })
+
+      df = await addPlayerHitRates({
+        client: fbRefClient,
+        df,
+        field,
+        point,
+        league,
       })
 
       appendOrCreate(fieldToDfs, `${field} > ${point}`, df)
@@ -158,19 +119,6 @@ if (fieldToDfs.size) {
     if (df.height === 0) {
       continue
     }
-
-    // for (const row of df.toRecords()) {
-    //   const playerId = row.ID as string
-    //   const player = row.player as string
-
-    //   console.log(playerId, player)
-
-    //   const logs = await fbRefClient.getPlayerMatchLogs({ playerId, player })
-
-    //   console.log(logs.head().toString())
-
-    //   break
-    // }
 
     entries.push([field, df])
   }

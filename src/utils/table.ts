@@ -1,14 +1,10 @@
 import pl from 'nodejs-polars'
 import xlsx from 'xlsx'
 import type { SquadTableCol, PlayerTableCol, Team } from '../types/fbRef'
-import {
-  estGamePlayedWhenStarting,
-  oddsOfProbability,
-  poissonGreaterOrEqual,
-} from './probabilty'
-import { findBestPlayerMatch } from './common'
+import { oddsOfProbability, poissonGreaterOrEqual } from './probabilty'
+import { findBestPlayerMatch, roundToTwo, zip } from './common'
 import type { OddsMap } from '../types/internal'
-import { MIN_GAME_STARTED, MIN_GAME_TIME } from '../constants'
+import { MIN_GAME_STARTED, MIN_GAME_TIME } from '../config/constants'
 
 export function getTeamStat(
   df: pl.DataFrame,
@@ -208,4 +204,34 @@ export function stack(dfs: pl.DataFrame[]) {
 
 export function sortByValue(df: pl.DataFrame) {
   return df.sort('Value (%)', true)
+}
+
+export function getStatHitRate(
+  df: pl.DataFrame,
+  {
+    stat,
+    point,
+  }: {
+    stat: PlayerTableCol
+    point: number
+  }
+): number {
+  const filtered = df.filter(pl.col('Start').eq(pl.lit('Y')))
+  const starts = filtered.height
+
+  if (starts === 0) {
+    return 0
+  }
+
+  let hits = 0
+
+  const counts = filtered.getColumn(stat).cast(pl.Int32).toArray()
+
+  for (const c of counts) {
+    if (c > point) {
+      hits++
+    }
+  }
+
+  return roundToTwo(hits / starts)
 }
