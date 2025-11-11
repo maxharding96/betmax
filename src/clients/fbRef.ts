@@ -34,11 +34,14 @@ export class FbRefClient extends Scraper {
     player: string
     leagueCode: LeagueCode
   }): Promise<pl.DataFrame> {
+    await this.rateLimiter.consume()
+
     const page = await this.getPage()
 
     const url =
       this.baseUrl +
       getPlayerStatMatchLogsPath({ playerId, player, leagueCode })
+
     await page.goto(url, { waitUntil: 'domcontentloaded' })
 
     const logs = await this.getTable({
@@ -68,6 +71,8 @@ export class FbRefClient extends Scraper {
 
   async getStatTables(input: GetStatTablesInput): Promise<Tables> {
     const { league, stat } = input
+
+    await this.rateLimiter.consume()
 
     const page = await this.getPage()
     const url = this.baseUrl + leagueToStatPath({ league, stat })

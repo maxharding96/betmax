@@ -1,13 +1,16 @@
 import type { Browser, Page } from 'playwright'
+import { TokenBucket } from './tokenBucket'
 
 export class Scraper {
   protected baseUrl: string
   protected browser: Browser
+  protected rateLimiter: TokenBucket
   protected page?: Page
 
   constructor({ baseUrl, browser }: { baseUrl: string; browser: Browser }) {
     this.baseUrl = baseUrl
     this.browser = browser
+    this.rateLimiter = new TokenBucket(3, 1, 500) // for now default 1 request per 3 seconds, 500ms jitter
   }
 
   async getPage() {

@@ -26,6 +26,8 @@ export class OddsCheckerClient extends Scraper {
   async getMatches(input: GetMatchesInput): Promise<GetMatchesOutput> {
     const { league } = input
 
+    await this.rateLimiter.consume()
+
     const url = this.baseUrl + leagueToPath(league)
 
     const page = await this.getPage()
@@ -67,6 +69,8 @@ export class OddsCheckerClient extends Scraper {
 
   async getOdds(input: GetOddsInput): Promise<GetOddsOutput | null> {
     const { fields, match } = input
+
+    await this.rateLimiter.consume()
 
     const url = this.baseUrl + matchToPath(match)
 
