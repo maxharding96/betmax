@@ -45,7 +45,7 @@ export class FbRefClient extends Scraper {
     await page.goto(url, { waitUntil: 'domcontentloaded' })
 
     const logs = await this.getTable({
-      tableId: 'matchlogs_2025-2026_9',
+      tableId: `matchlogs_2025-2026_${leagueCode}`,
     })
 
     return logs

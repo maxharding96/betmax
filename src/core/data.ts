@@ -122,12 +122,12 @@ function getTeamFieldStatsDf({
     valueArray.push(value)
   }
 
-  const valueCol = pl.Series('Value (%)', valueArray)
+  const valueCol = pl.Series('EV (%)', valueArray)
 
   const filtered = df
     .withColumns(oddsCol, probCol, valueCol) // add new columns
-    .filter(pl.col('Probabilty').ltEq(MAX_PROBABILITY)) // filter high probability odds
-    .filter(pl.col('Value (%)').gtEq(MIN_VALUE)) // filter low value odds
+    .filter(pl.col('Probability').ltEq(MAX_PROBABILITY)) // filter high probability odds
+    .filter(pl.col('EV (%)').gtEq(MIN_VALUE)) // filter low value odds
 
   return filtered
 }
@@ -230,10 +230,9 @@ export async function addPlayerHitRates({
   }
 
   const hitRateCol = pl.Series('Hit rate (%)', hitRates)
-  const oddsCol = pl.Series('hr_odds', odds)
+  const oddsCol = pl.Series('HR Odds', odds)
 
   return df
     .withColumns(hitRateCol, oddsCol)
-    .filter(oddsCol.minus(pl.col('Probability')).gt(0))
-    .drop('hr_odds')
+    .filter(pl.col('Probability').minus(pl.col('HR Odds')).gt(0))
 }

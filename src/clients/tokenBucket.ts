@@ -36,15 +36,13 @@ export class TokenBucket {
   async consume(tokens: number = 1): Promise<void> {
     while (!this.tryConsume(tokens)) {
       const tokensNeeded = tokens - this.tokens
-      const waitTime = Math.ceil(tokensNeeded / this.refillRate)
-      await new Promise((resolve) => setTimeout(resolve, waitTime))
-    }
-  }
+      let waitTime = Math.ceil(tokensNeeded / this.refillRate)
 
-  private async applyJitter(): Promise<void> {
-    if (this.jitterMs > 0) {
-      const delay = Math.random() * this.jitterMs
-      await new Promise((resolve) => setTimeout(resolve, delay))
+      if (this.jitterMs > 0) {
+        waitTime += Math.random() * this.jitterMs
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, waitTime))
     }
   }
 }

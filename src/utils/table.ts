@@ -62,14 +62,19 @@ export function getTeamPlayersDf(
     team: Team
   }
 ) {
-  return df.filter(
-    pl
-      .col('Squad')
-      .str.contains(team)
-      // Must have played at least MIN_GAME_TIME total
-      .and(pl.col('90s').cast(pl.Float32).gtEq(MIN_GAME_TIME))
-      // Must have started at least MIN_GAME_STARTED games
-      .and(pl.col('Starts').cast(pl.Float32).gt(MIN_GAME_STARTED))
+  return (
+    df
+      .filter(
+        pl
+          .col('Squad')
+          .str.contains(team)
+          // Must have played at least MIN_GAME_TIME total
+          .and(pl.col('90s').cast(pl.Float32).gtEq(MIN_GAME_TIME))
+          // Must have started at least MIN_GAME_STARTED games
+          .and(pl.col('Starts').cast(pl.Float32).gt(MIN_GAME_STARTED))
+      )
+      // TODO players appear as two rows if they have player for more than one club in a season
+      .unique({ subset: ['ID'], keep: 'last' })
   )
 }
 
@@ -203,7 +208,7 @@ export function stack(dfs: pl.DataFrame[]) {
 }
 
 export function sortByValue(df: pl.DataFrame) {
-  return df.sort('Value (%)', true)
+  return df.sort('EV (%)', true)
 }
 
 export function getStatHitRate(
@@ -216,7 +221,7 @@ export function getStatHitRate(
     point: number
   }
 ): number {
-  const filtered = df.filter(pl.col('Start').eq(pl.lit('Y')))
+  const filtered = df.filter(pl.col('Start').isIn(['Y', 'Y*']))
   const starts = filtered.height
 
   if (starts === 0) {

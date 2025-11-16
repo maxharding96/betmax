@@ -48,7 +48,7 @@ export function poissonGreaterOrEqual(
 
 export function oddsOfProbability(probability: number) {
   if (probability <= 0 || probability >= 1) {
-    return 0
+    return 999999 // just return huge number, this will get filtered out
   }
 
   return roundToTwo(1 / probability)

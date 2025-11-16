@@ -116,6 +116,7 @@ if (fieldToDfs.size) {
 
   for (const [field, dfs] of fieldToDfs) {
     const df = stack(dfs)
+
     if (df.height === 0) {
       continue
     }
@@ -123,7 +124,9 @@ if (fieldToDfs.size) {
     entries.push([field, df])
   }
 
-  saveToXlsx(entries)
+  if (entries.length) {
+    saveToXlsx(entries)
+  }
 }
 
 await browser.close()
