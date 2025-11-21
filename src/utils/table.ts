@@ -109,7 +109,7 @@ export function getPointProbabilities(
     }
   })
 
-  return pl.Series('Probability', probs)
+  return pl.Series('Prediction', probs)
 }
 
 export function getPointOdds(
@@ -148,7 +148,7 @@ export function getPointOdds(
     odds.push(o)
   })
 
-  return pl.Series('Best odds', odds)
+  return pl.Series('Odds', odds)
 }
 
 export function addPercentageDiff(df: pl.DataFrame) {
@@ -208,7 +208,23 @@ export function stack(dfs: pl.DataFrame[]) {
 }
 
 export function sortByValue(df: pl.DataFrame) {
-  return df.sort('EV (%)', true)
+  return df.sort(pl.col('EV (%)').mul(pl.col('EV (%)')), true)
+}
+
+export function getTeamVenueStat(
+  df: pl.DataFrame,
+  {
+    stat,
+    venue,
+  }: {
+    stat: SquadTableCol
+    venue: 'Home' | 'Away'
+  }
+) {
+  const filtered = df.filter(pl.col('Venue').eq(pl.lit(venue)))
+  const total = filtered.getColumn(stat).cast(pl.Int32).sum()
+
+  return total / filtered.height
 }
 
 export function getStatHitRate(
@@ -216,12 +232,19 @@ export function getStatHitRate(
   {
     stat,
     point,
+    venue,
   }: {
     stat: PlayerTableCol
     point: number
+    venue?: 'Home' | 'Away'
   }
 ): number {
-  const filtered = df.filter(pl.col('Start').isIn(['Y', 'Y*']))
+  let filtered = df.filter(pl.col('Start').isIn(['Y', 'Y*']))
+
+  if (venue) {
+    filtered = filtered.filter(pl.col('Venue').eq(pl.lit(venue)))
+  }
+
   const starts = filtered.height
 
   if (starts === 0) {

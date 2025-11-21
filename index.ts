@@ -86,23 +86,32 @@ for (const fixture of fixtures) {
       statToTables.set(stat, tables)
     }
 
+    const homeTeam = toFbRefTeam(match.home)
+    const awayTeam = toFbRefTeam(match.away)
+
     for (const point of points) {
-      let df = getFieldStatsDf({
+      let df = await getFieldStatsDf({
+        client: fbRefClient,
+        league,
         tables,
-        homeTeam: toFbRefTeam(match.home),
-        awayTeam: toFbRefTeam(match.away),
-        odds,
+        homeTeam,
+        awayTeam,
+        stat,
         field,
+        odds,
         point,
       })
 
-      df = await addPlayerHitRates({
-        client: fbRefClient,
-        df,
-        field,
-        point,
-        league,
-      })
+      //TODO not sure how easy this is to do. Cba right now.
+      if (field !== 'Player Fouls') {
+        df = await addPlayerHitRates({
+          client: fbRefClient,
+          df,
+          field,
+          point,
+          league,
+        })
+      }
 
       appendOrCreate(fieldToDfs, `${field} > ${point}`, df)
     }
@@ -118,6 +127,7 @@ if (fieldToDfs.size) {
     const df = stack(dfs)
 
     if (df.height === 0) {
+      console.log(chalk.red.bold(`❌ No bets found for ${field}`))
       continue
     }
 

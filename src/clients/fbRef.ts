@@ -4,6 +4,7 @@ import type {
   Table,
   Stat,
   LeagueCode,
+  Team,
 } from '../types/fbRef'
 import { type Browser } from 'playwright'
 import pl from 'nodejs-polars'
@@ -11,6 +12,7 @@ import {
   getColumns,
   getPlayerStatMatchLogsPath,
   getTableId,
+  getTeamMatchStatPath,
   leagueToStatPath,
 } from '../utils/fbRef'
 import { Scraper } from './scraper'
@@ -51,6 +53,37 @@ export class FbRefClient extends Scraper {
     return logs
   }
 
+  async getTeamMatchStatLogs({
+    league,
+    team,
+    teamId,
+    stat,
+  }: {
+    league: League
+    team: Team
+    teamId: string
+    stat: Stat
+  }) {
+    await this.rateLimiter.consume()
+
+    const page = await this.getPage()
+
+    const url =
+      this.baseUrl + getTeamMatchStatPath({ league, team, teamId, stat })
+
+    await page.goto(url, { waitUntil: 'domcontentloaded' })
+
+    const forLogs = await this.getTable({
+      tableId: 'matchlogs_for',
+    })
+
+    const againstLogs = await this.getTable({
+      tableId: 'matchlogs_against',
+    })
+
+    return { for: forLogs, against: againstLogs }
+  }
+
   async getBasePlayerTable({
     league,
   }: {
@@ -76,17 +109,19 @@ export class FbRefClient extends Scraper {
 
     const page = await this.getPage()
     const url = this.baseUrl + leagueToStatPath({ league, stat })
+
     await page.goto(url, { waitUntil: 'domcontentloaded' })
 
     const player = await this.getStatsTable({
       table: 'player',
       stat,
-      idCol: 'player',
+      parseId: 'player',
     })
 
     const squad = await this.getStatsTable({
       table: 'squad',
       stat,
+      parseId: 'team',
     })
 
     const vsSquad = await this.getStatsTable({
@@ -103,10 +138,10 @@ export class FbRefClient extends Scraper {
 
   private async getTable({
     tableId,
-    idCol,
+    parseId,
   }: {
     tableId: string
-    idCol?: string
+    parseId?: string
   }) {
     if (!this.page) {
       throw Error('Tried to get table before page was loaded')
@@ -115,42 +150,46 @@ export class FbRefClient extends Scraper {
     const loc = this.page.locator(`table#${tableId}`)
     const tb = loc.nth(0)
 
-    const data = await tb.evaluate((t, idColValue) => {
+    const data = await tb.evaluate((t, parseId) => {
       const rows = Array.from(t.querySelectorAll('tr'))
 
       return Promise.all(
         rows.map(async (row) => {
           const cells = Array.from(row.querySelectorAll('th, td'))
-          let currentId: string | null = null
 
           const contents = await Promise.all(
             cells.map(async (cell) => {
-              if (idColValue) {
-                const stat = cell.getAttribute('data-stat')
-                if (stat === idColValue) {
-                  currentId = cell.getAttribute('data-append-csv')
+              const contents: string[] = []
+
+              const dataStat = cell.getAttribute('data-stat')
+
+              if (parseId && dataStat === parseId) {
+                if (cell.children.length) {
+                  const a = cell.children[0]
+                  const href = a.getAttribute('href')
+                  if (!href) {
+                    throw Error('No href found on <a> tag')
+                  }
+
+                  const id = href.split('/')[3]
+                  contents.push(id)
+                } else {
+                  contents.push('ID')
                 }
               }
 
-              return cell.textContent ? cell.textContent.trim() : ''
+              contents.push(cell.textContent ? cell.textContent.trim() : '')
+
+              return contents
             })
           )
 
-          if (currentId) {
-            contents.unshift(currentId)
-          }
-
-          return contents
+          return contents.flat()
         })
       )
-    }, idCol)
+    }, parseId)
 
-    const headers = data[1]
-    if (idCol) {
-      headers.unshift('ID')
-    }
-
-    const rows = data.slice(2)
+    const [_, headers, ...rows] = data
 
     const arrayOfObjects: Record<string, string>[] = rows.map((row) => {
       const obj: Record<string, string> = {}
@@ -166,15 +205,15 @@ export class FbRefClient extends Scraper {
   private async getStatsTable({
     table,
     stat,
-    idCol,
+    parseId,
   }: {
     table: Table
     stat: Stat
-    idCol?: string
+    parseId?: string
   }) {
     const tableId = getTableId({ table, stat })
 
-    const df = await this.getTable({ tableId, idCol })
+    const df = await this.getTable({ tableId, parseId })
 
     return df.select(...getColumns({ table, stat }))
   }

@@ -28,7 +28,7 @@ bun start
 
 <img width="936" height="342" alt="output" src="https://github.com/user-attachments/assets/2dbb4e2d-3255-4bef-94ca-904c666d3756" />
 
-**Best odds** is the best odds found via [OddsChecker](https://www.oddschecker.com/) on event happening.<br/>
-**Probability** is the calculated probabilty that the event will happen.<br/>
+*Odds** is the best odds found via [OddsChecker](https://www.oddschecker.com/) on event happening.<br/>
+**Prediction** is the predicted odds that the event will happen.<br/>
 **Value** is the estimated value (EV) of the bet.
 

@@ -8,7 +8,7 @@ import type {
 } from '@/types/fbRef'
 import type { BettingField, League, OddsMap } from '@/types/internal'
 import type { Odds } from '@/types/oddsChecker'
-import { getOrCreate, roundToTwo } from '@/utils/common'
+import { getOrCreate, zip } from '@/utils/common'
 import {
   bettingFieldToPlayerCol,
   bettingFieldToTeamCol,
@@ -20,12 +20,30 @@ import {
   getStatHitRate,
   getTeamMeanStat,
   getTeamPlayersDf,
-  getTeamStat,
-  sortByValue,
+  getTeamVenueStat,
 } from '@/utils/table'
 import { oddsOfProbability, valueOfOdds } from '@/utils/probabilty'
 import { MAX_PROBABILITY, MIN_VALUE } from '@/config/constants'
 import type { FbRefClient } from '@/clients'
+
+let teamToIdMap: Map<Team, string> | null = null
+
+function createTeamToIdMap(df: pl.DataFrame) {
+  if (teamToIdMap) {
+    return teamToIdMap
+  }
+
+  teamToIdMap = new Map<Team, string>()
+
+  for (const row of df.toRecords()) {
+    const team = row.Squad as Team
+    const id = row.ID as string
+
+    teamToIdMap.set(team, id)
+  }
+
+  return teamToIdMap
+}
 
 function createOddsMapping(odds: Odds[]): OddsMap {
   const mapping: OddsMap = new Map()
@@ -54,22 +72,47 @@ function getPlayerNames(odds: Odds[]): string[] {
   return [...names]
 }
 
-function getStatWeight({
+const teamIdToMatchLogs = new Map<
+  string,
+  { for: pl.DataFrame; against: pl.DataFrame }
+>()
+
+async function getStatWeight({
+  client,
+  league,
   tables,
   opponent,
+  opponentId,
+  statCol,
   stat,
+  venue,
 }: {
+  client: FbRefClient
+  league: League
   tables: Tables
   opponent: Team
-  stat: SquadTableCol
+  opponentId: string
+  statCol: SquadTableCol
+  stat: Stat
+  venue: 'Home' | 'Away'
 }) {
-  const vsOpponent = getTeamStat(tables.vsSquad, {
-    stat,
-    team: opponent,
-    vs: true,
+  let matchLogs = teamIdToMatchLogs.get(opponentId)
+
+  if (!matchLogs) {
+    matchLogs = await client.getTeamMatchStatLogs({
+      league,
+      stat,
+      team: opponent,
+      teamId: opponentId,
+    })
+  }
+
+  const vsOpponent = getTeamVenueStat(matchLogs.against, {
+    stat: statCol,
+    venue,
   })
 
-  const mean = getTeamMeanStat(tables.vsSquad, { stat })
+  const mean = getTeamMeanStat(tables.vsSquad, { stat: statCol })
 
   return vsOpponent / mean
 }
@@ -122,27 +165,33 @@ function getTeamFieldStatsDf({
     valueArray.push(value)
   }
 
-  const valueCol = pl.Series('EV (%)', valueArray)
+  const valueCol = pl.Series('P EV (%)', valueArray)
 
   const filtered = df
     .withColumns(oddsCol, probCol, valueCol) // add new columns
-    .filter(pl.col('Probability').ltEq(MAX_PROBABILITY)) // filter high probability odds
-    .filter(pl.col('EV (%)').gtEq(MIN_VALUE)) // filter low value odds
+    .filter(pl.col('Prediction').ltEq(MAX_PROBABILITY)) // filter high probability odds
+    .filter(pl.col('P EV (%)').gtEq(MIN_VALUE)) // filter low value odds
 
   return filtered
 }
 
-export function getFieldStatsDf({
+export async function getFieldStatsDf({
+  client,
+  league,
   tables,
   homeTeam,
   awayTeam,
+  stat,
   field,
   odds,
   point,
 }: {
+  client: FbRefClient
+  league: League
   tables: Tables
   homeTeam: Team
   awayTeam: Team
+  stat: Stat
   field: BettingField
   odds: Odds[]
   point: number
@@ -152,16 +201,28 @@ export function getFieldStatsDf({
 
   const teamCol = bettingFieldToTeamCol(field)
 
-  const homeWeight = getStatWeight({
+  const teamToIdMap = createTeamToIdMap(tables.squad)
+
+  const homeWeight = await getStatWeight({
+    client,
+    league,
     tables,
     opponent: awayTeam,
-    stat: teamCol,
+    opponentId: teamToIdMap.get(awayTeam)!,
+    stat,
+    statCol: teamCol,
+    venue: 'Home',
   })
 
-  const awayWeight = getStatWeight({
+  const awayWeight = await getStatWeight({
+    client,
+    league,
     tables,
     opponent: homeTeam,
-    stat: teamCol,
+    opponentId: teamToIdMap.get(homeTeam)!,
+    stat,
+    statCol: teamCol,
+    venue: 'Away',
   })
 
   const playerCol = bettingFieldToPlayerCol(field)
@@ -186,7 +247,7 @@ export function getFieldStatsDf({
     point,
   })
 
-  return sortByValue(pl.concat([homeDf, awayDf]))
+  return pl.concat([homeDf, awayDf])
 }
 
 const playerIdToMatchLogs = new Map<string, pl.DataFrame>()
@@ -204,7 +265,6 @@ export async function addPlayerHitRates({
   point: number
   league: League
 }) {
-  const hitRates: number[] = []
   const odds: number[] = []
 
   const leagueCode = leagueToLeagueCode(league)
@@ -224,15 +284,18 @@ export async function addPlayerHitRates({
     }
 
     const hr = getStatHitRate(logs, { stat, point })
-
-    hitRates.push(roundToTwo(hr) * 100)
-    odds.push(oddsOfProbability(hr))
+    const odd = oddsOfProbability(hr)
+    odds.push(odd)
   }
 
-  const hitRateCol = pl.Series('Hit rate (%)', hitRates)
-  const oddsCol = pl.Series('HR Odds', odds)
+  const real = df.getColumn('Odds').cast(pl.Float32).toArray()
+  const hitRateCol = pl.Series('Hit rate', odds)
+  const valueCol = pl.Series(
+    'HR EV (%)',
+    zip(real, odds).map(([r, o]) => valueOfOdds({ real: r, predicted: o }))
+  )
 
   return df
-    .withColumns(hitRateCol, oddsCol)
-    .filter(pl.col('Probability').minus(pl.col('HR Odds')).gt(0))
+    .withColumns(hitRateCol, hitRateCol, valueCol)
+    .filter(pl.col('HR EV (%)').gtEq(MIN_VALUE)) // filter low value odds
 }

@@ -34,16 +34,16 @@ export function getTeamMatchStatPath({
   teamId,
   stat,
 }: {
-  league: string
+  league: League
   team: string
   teamId: string
   stat: Stat
 }) {
   const statRoute = stat === 'standard' ? 'stats' : stat
 
-  return `/squads/${teamId}/2025-2026/matchlogs/c9/${statRoute}/${slugify(
-    team
-  )}-Match-Logs-${slugify(league)}`
+  return `/squads/${teamId}/2025-2026/matchlogs/c${leagueToLeagueCode(
+    league
+  )}/${statRoute}/${slugify(team)}-Match-Logs-${slugify(league)}`
 }
 
 export function leagueToStatPath({
@@ -234,6 +234,16 @@ export function bettingFieldToStat(field: BettingField): Stat {
 export function getColumns({ table, stat }: { table: Table; stat: Stat }) {
   switch (table) {
     case 'squad':
+      switch (stat) {
+        case 'standard':
+          return ['Squad', 'MP']
+        case 'shooting':
+          return ['ID', 'Squad', 'Sh', 'SoT', '90s']
+        case 'misc':
+          return ['ID', 'Squad', 'Fls', '90s']
+        case 'playingtime':
+          return ['Squad', 'Mn/Start']
+      }
     case 'vsSquad':
       switch (stat) {
         case 'standard':
@@ -241,7 +251,7 @@ export function getColumns({ table, stat }: { table: Table; stat: Stat }) {
         case 'shooting':
           return ['Squad', 'Sh', 'SoT', '90s']
         case 'misc':
-          return ['Squad', 'Fls', '90s']
+          return ['ID', 'Squad', 'Fls', '90s']
         case 'playingtime':
           return ['Squad', 'Mn/Start']
       }
