@@ -21,6 +21,7 @@ import {
   getTeamMeanStat,
   getTeamPlayersDf,
   getTeamVenueStat,
+  sortByValue,
 } from '@/utils/table'
 import { oddsOfProbability, valueOfOdds } from '@/utils/probabilty'
 import { MAX_PROBABILITY, MIN_VALUE } from '@/config/constants'

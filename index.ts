@@ -1,5 +1,5 @@
 import { FbRefClient, OddsCheckerClient } from './src/clients'
-import { join, saveToXlsx, stack } from './src/utils/table'
+import { join, saveToXlsx, sortByValue, stack } from './src/utils/table'
 import pl from 'nodejs-polars'
 import { bettingFieldToStat, toFbRefTeam } from './src/utils/fbRef'
 import { addPlayerHitRates, getFieldStatsDf } from '@/core/data'
@@ -131,7 +131,7 @@ if (fieldToDfs.size) {
       continue
     }
 
-    entries.push([field, df])
+    entries.push([field, sortByValue(df)])
   }
 
   if (entries.length) {

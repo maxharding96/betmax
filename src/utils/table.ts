@@ -203,12 +203,12 @@ export function join(dfs: pl.DataFrame[]) {
 
 export function stack(dfs: pl.DataFrame[]) {
   return dfs.reduce((acc, df) => {
-    return sortByValue(pl.concat([acc, df], { how: 'diagonal' }))
+    return pl.concat([acc, df], { how: 'diagonal' })
   })
 }
 
 export function sortByValue(df: pl.DataFrame) {
-  return df.sort(pl.col('EV (%)').mul(pl.col('EV (%)')), true)
+  return df.sort(pl.col('P EV (%)').mul(pl.col('HR EV (%)')), true)
 }
 
 export function getTeamVenueStat(
