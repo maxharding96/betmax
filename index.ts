@@ -14,6 +14,7 @@ import {
   selectPoints,
 } from '@/core/input'
 import { createFixtureToMatchMap } from '@/utils/oddsChecker'
+import { FotMobClient } from '@/clients/fotmob'
 
 // Cache
 const statToTables = new Map<Stat, Tables>()
@@ -23,11 +24,15 @@ const fieldToDfs = new Map<string, pl.DataFrame[]>()
 const browser = await getBrowser({ headless: true })
 
 // Scrape clients
+const fotMobClient = new FotMobClient(browser)
+
 const oddsCheckerClient = new OddsCheckerClient(browser)
 const fbRefClient = new FbRefClient(browser)
 
 // Select inputs
 const league = await selectLeague()
+
+const hostToFixturePath = await fotMobClient.getFixtures({ league })
 
 console.log(chalk.green.bold('⚽ Fetching matches...'))
 
@@ -89,6 +94,11 @@ for (const fixture of fixtures) {
     const homeTeam = toFbRefTeam(match.home)
     const awayTeam = toFbRefTeam(match.away)
 
+    const fixturePath = hostToFixturePath.get(homeTeam)
+    const lineups = fixturePath
+      ? await fotMobClient.getLineups(fixturePath)
+      : null
+
     for (const point of points) {
       let df = await getFieldStatsDf({
         client: fbRefClient,
@@ -100,6 +110,7 @@ for (const fixture of fixtures) {
         field,
         odds,
         point,
+        lineups,
       })
 
       //TODO not sure how easy this is to do. Cba right now.

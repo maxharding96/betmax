@@ -2,7 +2,7 @@ import pl from 'nodejs-polars'
 import xlsx from 'xlsx'
 import type { SquadTableCol, PlayerTableCol, Team } from '../types/fbRef'
 import { oddsOfProbability, poissonGreaterOrEqual } from './probabilty'
-import { findBestPlayerMatch, roundToTwo, zip } from './common'
+import { findBestPlayerMatch, roundToTwo } from './common'
 import type { OddsMap } from '../types/internal'
 import { MIN_GAME_STARTED, MIN_GAME_TIME } from '../config/constants'
 
@@ -58,24 +58,36 @@ export function getTeamPlayersDf(
   df: pl.DataFrame,
   {
     team,
+    lineups,
   }: {
     team: Team
+    lineups: string[] | null
   }
 ) {
-  return (
-    df
-      .filter(
-        pl
-          .col('Squad')
-          .str.contains(team)
-          // Must have played at least MIN_GAME_TIME total
-          .and(pl.col('90s').cast(pl.Float32).gtEq(MIN_GAME_TIME))
-          // Must have started at least MIN_GAME_STARTED games
-          .and(pl.col('Starts').cast(pl.Float32).gt(MIN_GAME_STARTED))
-      )
-      // TODO players appear as two rows if they have player for more than one club in a season
-      .unique({ subset: ['ID'], keep: 'last' })
-  )
+  const filtered = df
+    .filter(
+      pl
+        .col('Squad')
+        .str.contains(team)
+        // Must have played at least MIN_GAME_TIME total
+        .and(pl.col('90s').cast(pl.Float32).gtEq(MIN_GAME_TIME))
+        // Must have started at least MIN_GAME_STARTED games
+        .and(pl.col('Starts').cast(pl.Float32).gt(MIN_GAME_STARTED))
+    )
+    // TODO players appear as two rows if they have player for more than one club in a season
+    .unique({ subset: ['ID'], keep: 'last' })
+
+  if (lineups) {
+    const players = df.getColumn('Players').cast(pl.String).toArray()
+    const mask = players.map((p, i) => !!findBestPlayerMatch(p, lineups))
+
+    return filtered
+      .withColumn(pl.Series('_mask', mask))
+      .filter(pl.col('_mask'))
+      .drop('_mask')
+  }
+
+  return filtered
 }
 
 export function getPointProbabilities(

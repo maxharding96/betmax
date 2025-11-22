@@ -21,7 +21,6 @@ import {
   getTeamMeanStat,
   getTeamPlayersDf,
   getTeamVenueStat,
-  sortByValue,
 } from '@/utils/table'
 import { oddsOfProbability, valueOfOdds } from '@/utils/probabilty'
 import { MAX_PROBABILITY, MIN_VALUE } from '@/config/constants'
@@ -126,6 +125,7 @@ function getTeamFieldStatsDf({
   map,
   names,
   point,
+  lineups,
 }: {
   playerDf: pl.DataFrame
   team: Team
@@ -134,9 +134,10 @@ function getTeamFieldStatsDf({
   map: OddsMap
   names: string[]
   point: number
+  lineups: string[] | null
 }) {
   // get df of players of team that have played
-  const df = getTeamPlayersDf(playerDf, { team })
+  const df = getTeamPlayersDf(playerDf, { team, lineups })
 
   // get best odds for each player
   const oddsCol = getPointOdds(df, {
@@ -186,6 +187,7 @@ export async function getFieldStatsDf({
   field,
   odds,
   point,
+  lineups,
 }: {
   client: FbRefClient
   league: League
@@ -196,6 +198,7 @@ export async function getFieldStatsDf({
   field: BettingField
   odds: Odds[]
   point: number
+  lineups: string[] | null
 }) {
   const map = createOddsMapping(odds)
   const names = getPlayerNames(odds)
@@ -236,6 +239,7 @@ export async function getFieldStatsDf({
     map,
     names,
     point,
+    lineups,
   })
 
   const awayDf = getTeamFieldStatsDf({
@@ -246,6 +250,7 @@ export async function getFieldStatsDf({
     map,
     names,
     point,
+    lineups,
   })
 
   return pl.concat([homeDf, awayDf])
