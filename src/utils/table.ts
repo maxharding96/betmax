@@ -78,13 +78,12 @@ export function getTeamPlayersDf(
     .unique({ subset: ['ID'], keep: 'last' })
 
   if (lineups) {
-    const players = df.getColumn('Players').cast(pl.String).toArray()
+    const players = filtered.getColumn('Player').cast(pl.String).toArray()
     const mask = players.map((p, i) => !!findBestPlayerMatch(p, lineups))
 
-    return filtered
-      .withColumn(pl.Series('_mask', mask))
-      .filter(pl.col('_mask'))
-      .drop('_mask')
+    return filtered.withColumn(pl.Series('Starting', mask))
+    // .filter(pl.col('_mask'))
+    // .drop('_mask')
   }
 
   return filtered
@@ -251,27 +250,31 @@ export function getStatHitRate(
     venue?: 'Home' | 'Away'
   }
 ): number {
-  let filtered = df.filter(pl.col('Start').isIn(['Y', 'Y*']))
+  try {
+    let filtered = df.filter(pl.col('Start').isIn(['Y', 'Y*']))
 
-  if (venue) {
-    filtered = filtered.filter(pl.col('Venue').eq(pl.lit(venue)))
-  }
+    if (venue) {
+      filtered = filtered.filter(pl.col('Venue').eq(pl.lit(venue)))
+    }
 
-  const starts = filtered.height
+    const starts = filtered.height
 
-  if (starts === 0) {
+    if (starts === 0) {
+      return 0
+    }
+
+    let hits = 0
+
+    const counts = filtered.getColumn(stat).cast(pl.Int32).toArray()
+
+    for (const c of counts) {
+      if (c > point) {
+        hits++
+      }
+    }
+
+    return roundToTwo(hits / starts)
+  } catch (error) {
     return 0
   }
-
-  let hits = 0
-
-  const counts = filtered.getColumn(stat).cast(pl.Int32).toArray()
-
-  for (const c of counts) {
-    if (c > point) {
-      hits++
-    }
-  }
-
-  return roundToTwo(hits / starts)
 }

@@ -95,9 +95,11 @@ for (const fixture of fixtures) {
     const awayTeam = toFbRefTeam(match.away)
 
     const fixturePath = hostToFixturePath.get(homeTeam)
-    const lineups = fixturePath
-      ? await fotMobClient.getLineups(fixturePath)
-      : null
+    // const lineups = fixturePath
+    //   ? await fotMobClient.getLineups(fixturePath)
+    //   : null
+
+    const lineups = null
 
     for (const point of points) {
       let df = await getFieldStatsDf({
