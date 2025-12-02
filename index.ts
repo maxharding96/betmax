@@ -123,6 +123,7 @@ for (const fixture of fixtures) {
           field,
           point,
           league,
+          homeTeam,
         })
       }
 

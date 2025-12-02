@@ -47,7 +47,7 @@ export function poissonGreaterOrEqual(
 }
 
 export function oddsOfProbability(probability: number) {
-  if (probability <= 0 || probability >= 1) {
+  if (probability <= 0 || probability > 1) {
     return 999999 // just return huge number, this will get filtered out
   }
 
@@ -62,4 +62,14 @@ export function valueOfOdds({
   real: number
 }) {
   return roundToTwo(real / predicted - 1) * 100
+}
+
+export function getProbabilityOfOdds(odds: number) {
+  return 1 / odds
+}
+
+export function getKellyCriterion(o: number, p: number) {
+  const b = o - 1
+  const q = 1 - p
+  return roundToTwo((b * p - q) / b) * 100
 }

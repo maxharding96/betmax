@@ -219,7 +219,7 @@ export function stack(dfs: pl.DataFrame[]) {
 }
 
 export function sortByValue(df: pl.DataFrame) {
-  return df.sort(pl.col('P EV (%)').mul(pl.col('HR EV (%)')), true)
+  return df.sort('P EV (%)', true)
 }
 
 export function getTeamVenueStat(
@@ -244,10 +244,12 @@ export function getStatHitRate(
     stat,
     point,
     venue,
+    limit,
   }: {
     stat: PlayerTableCol
     point: number
     venue?: 'Home' | 'Away'
+    limit?: number
   }
 ): number {
   try {
@@ -255,6 +257,10 @@ export function getStatHitRate(
 
     if (venue) {
       filtered = filtered.filter(pl.col('Venue').eq(pl.lit(venue)))
+    }
+
+    if (limit) {
+      filtered = filtered.tail(limit)
     }
 
     const starts = filtered.height
