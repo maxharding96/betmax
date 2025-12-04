@@ -176,51 +176,9 @@ const tableEnum = z.enum(['squad', 'vsSquad', 'player'])
 
 export type Table = z.infer<typeof tableEnum>
 
-const squadTableColEnum = z.enum([
-  // Shared
-  'Squad',
-  '# Pl',
-  '90s',
-  // Shooting
-  'Gls',
-  'Sh',
-  'SoT',
-  'SoT%',
-  'Sh/90',
-  'SoT/90',
-  'xG',
-  // Miscellaneous
-  'Fls',
-  'Fld',
-])
+const statColEnum = z.enum(['Sh', 'SoT'])
 
-export type SquadTableCol = z.infer<typeof squadTableColEnum>
-
-const playerTableColEnum = z.enum([
-  // Shared
-  'Rk',
-  'Player',
-  'Nation',
-  'Pos',
-  'Squad',
-  'Age',
-  'Born',
-  '90s',
-  'Matches',
-  // Shooting
-  'Gls',
-  'Sh',
-  'SoT',
-  'SoT%',
-  'Sh/90',
-  'SoT/90',
-  'xG',
-  // Miscellaneous
-  'Fls',
-  'Fld',
-])
-
-export type PlayerTableCol = z.infer<typeof playerTableColEnum>
+export type StatCol = z.infer<typeof statColEnum>
 
 const getPlayerPlayedTableInputSchema = z.object({
   league: leagueEnum,
@@ -238,3 +196,18 @@ const getStatTablesInputSchema = z.object({
 export type GetStatTablesInput = z.infer<typeof getStatTablesInputSchema>
 
 export type Tables = Record<Table, pl.DataFrame>
+
+const venueEnum = z.enum(['Home', 'Away'])
+
+export type Venue = z.infer<typeof venueEnum>
+
+const weightsSchema = z.record(statColEnum, z.number())
+
+const teamWeightsSchema = z.record(venueEnum, weightsSchema)
+
+export const leagueTeamWeightsSchema = z.partialRecord(
+  teamEnum,
+  teamWeightsSchema
+)
+
+export type LeagueTeamWeights = z.infer<typeof leagueTeamWeightsSchema>

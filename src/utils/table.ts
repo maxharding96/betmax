@@ -1,10 +1,14 @@
 import pl from 'nodejs-polars'
 import xlsx from 'xlsx'
-import type { SquadTableCol, PlayerTableCol, Team } from '../types/fbRef'
+import type { StatCol, Team } from '../types/fbRef'
 import { oddsOfProbability, poissonGreaterOrEqual } from './probabilty'
 import { findBestPlayerMatch, roundToTwo } from './common'
 import type { OddsMap } from '../types/internal'
-import { MIN_GAME_STARTED, MIN_GAME_TIME } from '../config/constants'
+import {
+  MIN_GAME_STARTED,
+  MIN_GAME_TIME,
+  VENUE_ALPHA,
+} from '../config/constants'
 
 export function getTeamStat(
   df: pl.DataFrame,
@@ -14,7 +18,7 @@ export function getTeamStat(
     vs,
   }: {
     team: Team
-    stat: SquadTableCol
+    stat: StatCol
     vs: boolean
   }
 ) {
@@ -38,7 +42,7 @@ export function getTeamMeanStat(
   {
     stat,
   }: {
-    stat: SquadTableCol
+    stat: StatCol
   }
 ) {
   return df
@@ -59,9 +63,11 @@ export function getTeamPlayersDf(
   {
     team,
     lineups,
+    col,
   }: {
     team: Team
     lineups: string[] | null
+    col: StatCol
   }
 ) {
   const filtered = df
@@ -73,6 +79,7 @@ export function getTeamPlayersDf(
         .and(pl.col('90s').cast(pl.Float32).gtEq(MIN_GAME_TIME))
         // Must have started at least MIN_GAME_STARTED games
         .and(pl.col('Starts').cast(pl.Float32).gt(MIN_GAME_STARTED))
+        .and(pl.col(col).cast(pl.Int32).gt(0))
     )
     // TODO players appear as two rows if they have player for more than one club in a season
     .unique({ subset: ['ID'], keep: 'last' })
@@ -97,7 +104,7 @@ export function getPointProbabilities(
     weight,
   }: {
     point: number
-    col: PlayerTableCol
+    col: StatCol
     weight: number
   }
 ) {
@@ -219,7 +226,7 @@ export function stack(dfs: pl.DataFrame[]) {
 }
 
 export function sortByValue(df: pl.DataFrame) {
-  return df.sort('P EV (%)', true)
+  return df.sort('EV (%)', true)
 }
 
 export function getTeamVenueStat(
@@ -228,7 +235,7 @@ export function getTeamVenueStat(
     stat,
     venue,
   }: {
-    stat: SquadTableCol
+    stat: StatCol
     venue: 'Home' | 'Away'
   }
 ) {
@@ -236,6 +243,23 @@ export function getTeamVenueStat(
   const total = filtered.getColumn(stat).cast(pl.Int32).sum()
 
   return total / filtered.height
+}
+
+export function getTeamShootingStats(df: pl.DataFrame) {
+  const home = df.filter(pl.col('Venue').eq(pl.lit('Home')))
+  const away = df.filter(pl.col('Venue').eq(pl.lit('Away')))
+
+  // Need to reverse as this versus
+  return {
+    Home: {
+      SoT: away.getColumn('SoT').cast(pl.Int32).mean(),
+      Sh: away.getColumn('Sh').cast(pl.Int32).mean(),
+    },
+    Away: {
+      SoT: home.getColumn('SoT').cast(pl.Int32).mean(),
+      Sh: home.getColumn('Sh').cast(pl.Int32).mean(),
+    },
+  }
 }
 
 export function getStatHitRate(
@@ -246,7 +270,7 @@ export function getStatHitRate(
     venue,
     limit,
   }: {
-    stat: PlayerTableCol
+    stat: StatCol
     point: number
     venue?: 'Home' | 'Away'
     limit?: number
@@ -281,6 +305,33 @@ export function getStatHitRate(
 
     return roundToTwo(hits / starts)
   } catch (error) {
+    return 0
+  }
+}
+
+export function getWeightedStat(
+  df: pl.DataFrame,
+  { stat, mps, isHome }: { stat: StatCol; mps: number; isHome: boolean }
+) {
+  try {
+    const home = df.filter(pl.col('Venue').eq(pl.lit('Home')))
+    const away = df.filter(pl.col('Venue').eq(pl.lit('Away')))
+
+    const homeTotal = home.getColumn(stat).cast(pl.Int32).sum()
+    const awayTotal = away.getColumn(stat).cast(pl.Int32).sum()
+
+    const homeMinutes = home.getColumn('Min').cast(pl.Int32).sum()
+    const awayMinutes = away.getColumn('Min').cast(pl.Int32).sum()
+
+    const homeRate = homeTotal / (homeMinutes / 90)
+    const awayRate = awayTotal / (awayMinutes / 90)
+
+    const weighted = isHome
+      ? VENUE_ALPHA * homeRate + (1 - VENUE_ALPHA) * awayRate
+      : VENUE_ALPHA * awayRate + (1 - VENUE_ALPHA) * homeRate
+
+    return weighted * (mps / 90)
+  } catch {
     return 0
   }
 }

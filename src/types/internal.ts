@@ -15,7 +15,6 @@ export type League = z.infer<typeof leagueEnum>
 export const bettingFieldEnum = z.enum([
   'Player Shots On Target',
   'Player Shots',
-  'Player Fouls',
 ])
 
 export type BettingField = z.infer<typeof bettingFieldEnum>

@@ -2,7 +2,7 @@ import { FbRefClient, OddsCheckerClient } from './src/clients'
 import { join, saveToXlsx, sortByValue, stack } from './src/utils/table'
 import pl from 'nodejs-polars'
 import { bettingFieldToStat, toFbRefTeam } from './src/utils/fbRef'
-import { addPlayerHitRates, getFieldStatsDf } from '@/core/data'
+import { addWeightedStats, getFieldStatsDf } from '@/core/data'
 import type { Stat, Tables } from './src/types/fbRef'
 import chalk from 'chalk'
 import { appendOrCreate } from './src/utils/common'
@@ -103,29 +103,34 @@ for (const fixture of fixtures) {
 
     for (const point of points) {
       let df = await getFieldStatsDf({
-        client: fbRefClient,
         league,
         tables,
         homeTeam,
         awayTeam,
-        stat,
         field,
         odds,
         point,
         lineups,
       })
 
-      //TODO not sure how easy this is to do. Cba right now.
-      if (field !== 'Player Fouls') {
-        df = await addPlayerHitRates({
-          client: fbRefClient,
-          df,
-          field,
-          point,
-          league,
-          homeTeam,
-        })
-      }
+      // df = await addPlayerHitRates({
+      //   client: fbRefClient,
+      //   df,
+      //   field,
+      //   point,
+      //   league,
+      //   homeTeam,
+      // })
+
+      df = await addWeightedStats({
+        client: fbRefClient,
+        df,
+        field,
+        point,
+        league,
+        homeTeam,
+        awayTeam,
+      })
 
       appendOrCreate(fieldToDfs, `${field} > ${point}`, df)
     }

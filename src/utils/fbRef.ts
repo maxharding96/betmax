@@ -1,14 +1,15 @@
-import type {
-  LeagueCode,
-  PlayerTableCol,
-  SquadTableCol,
-  Stat,
-  Team,
-  Table,
+import {
+  type LeagueCode,
+  type StatCol,
+  type Stat,
+  type Team,
+  type Table,
+  leagueTeamWeightsSchema,
 } from '../types/fbRef'
 import type { BettingField, League } from '../types/internal'
 import type { Team as OddsCheckerTeam } from '../types/oddsChecker'
 import { slugify } from './common'
+import { readFileSync } from 'fs'
 
 // https://fbref.com/en/players/de31038e/matchlogs/2025-2026/c9/Elliot-Anderson-Match-Logs
 
@@ -199,25 +200,12 @@ export function toFbRefTeam(team: OddsCheckerTeam): Team {
   }
 }
 
-export function bettingFieldToTeamCol(field: BettingField): SquadTableCol {
+export function bettingFieldToStatCol(field: BettingField): StatCol {
   switch (field) {
     case 'Player Shots':
       return 'Sh'
     case 'Player Shots On Target':
       return 'SoT'
-    case 'Player Fouls':
-      return 'Fls'
-  }
-}
-
-export function bettingFieldToPlayerCol(field: BettingField): PlayerTableCol {
-  switch (field) {
-    case 'Player Shots':
-      return 'Sh'
-    case 'Player Shots On Target':
-      return 'SoT'
-    case 'Player Fouls':
-      return 'Fls'
   }
 }
 
@@ -226,8 +214,6 @@ export function bettingFieldToStat(field: BettingField): Stat {
     case 'Player Shots':
     case 'Player Shots On Target':
       return 'shooting'
-    case 'Player Fouls':
-      return 'misc'
   }
 }
 
@@ -286,4 +272,17 @@ export function getTableId({
     case 'vsSquad':
       return `stats_squads_${statId}_against`
   }
+}
+
+export function getLeagueTeamWeightsPath(league: League) {
+  return `./weights/${slugify(league, true)}.json`
+}
+
+export function readLeagueTeamWeights(league: League) {
+  const path = getLeagueTeamWeightsPath(league)
+
+  const raw = readFileSync(path, 'utf8')
+  const json = JSON.parse(raw)
+
+  return leagueTeamWeightsSchema.parse(json)
 }
