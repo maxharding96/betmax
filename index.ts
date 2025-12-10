@@ -2,7 +2,11 @@ import { FbRefClient, OddsCheckerClient } from './src/clients'
 import { join, saveToXlsx, sortByValue, stack } from './src/utils/table'
 import pl from 'nodejs-polars'
 import { bettingFieldToStat, toFbRefTeam } from './src/utils/fbRef'
-import { addWeightedStats, getFieldStatsDf } from '@/core/data'
+import {
+  addPlayerHitRates,
+  addWeightedStats,
+  getFieldStatsDf,
+} from '@/core/data'
 import type { Stat, Tables } from './src/types/fbRef'
 import chalk from 'chalk'
 import { appendOrCreate } from './src/utils/common'
@@ -14,7 +18,6 @@ import {
   selectPoints,
 } from '@/core/input'
 import { createFixtureToMatchMap } from '@/utils/oddsChecker'
-import { FotMobClient } from '@/clients/fotmob'
 
 // Cache
 const statToTables = new Map<Stat, Tables>()
@@ -24,15 +27,11 @@ const fieldToDfs = new Map<string, pl.DataFrame[]>()
 const browser = await getBrowser({ headless: true })
 
 // Scrape clients
-const fotMobClient = new FotMobClient(browser)
-
 const oddsCheckerClient = new OddsCheckerClient(browser)
 const fbRefClient = new FbRefClient(browser)
 
 // Select inputs
 const league = await selectLeague()
-
-const hostToFixturePath = await fotMobClient.getFixtures({ league })
 
 console.log(chalk.green.bold('⚽ Fetching matches...'))
 
@@ -94,13 +93,6 @@ for (const fixture of fixtures) {
     const homeTeam = toFbRefTeam(match.home)
     const awayTeam = toFbRefTeam(match.away)
 
-    const fixturePath = hostToFixturePath.get(homeTeam)
-    // const lineups = fixturePath
-    //   ? await fotMobClient.getLineups(fixturePath)
-    //   : null
-
-    const lineups = null
-
     for (const point of points) {
       let df = await getFieldStatsDf({
         league,
@@ -110,17 +102,12 @@ for (const fixture of fixtures) {
         field,
         odds,
         point,
-        lineups,
+        lineups: null,
       })
 
-      // df = await addPlayerHitRates({
-      //   client: fbRefClient,
-      //   df,
-      //   field,
-      //   point,
-      //   league,
-      //   homeTeam,
-      // })
+      if (df.height === 0) {
+        continue
+      }
 
       df = await addWeightedStats({
         client: fbRefClient,
@@ -130,6 +117,19 @@ for (const fixture of fixtures) {
         league,
         homeTeam,
         awayTeam,
+      })
+
+      if (df.height === 0) {
+        continue
+      }
+
+      df = await addPlayerHitRates({
+        client: fbRefClient,
+        df,
+        field,
+        point,
+        league,
+        homeTeam,
       })
 
       appendOrCreate(fieldToDfs, `${field} > ${point}`, df)
@@ -150,7 +150,7 @@ if (fieldToDfs.size) {
       continue
     }
 
-    entries.push([field, sortByValue(df)])
+    entries.push([field, sortByValue(df.drop('ID'))])
   }
 
   if (entries.length) {

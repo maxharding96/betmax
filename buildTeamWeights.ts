@@ -1,5 +1,5 @@
 import { FbRefClient } from './src/clients'
-import { getTeamShootingStats } from './src/utils/table'
+import { getTeamAvgAgainstShootingStats } from './src/utils/table'
 import type { LeagueTeamWeights, Team } from './src/types/fbRef'
 import { getBrowser } from '@/core/web'
 import { selectLeague } from '@/core/input'
@@ -15,10 +15,10 @@ const league = await selectLeague()
 //TODO lazy reusing type
 const allStats: LeagueTeamWeights = {}
 
-let sotHomeTotal = 0
-let sotAwayTotal = 0
-let shHomeTotal = 0
-let shAwayTotal = 0
+let sotHomeMeanSum = 0
+let sotAwayMeanSum = 0
+let shHomeMeanSum = 0
+let shAwayMeanSum = 0
 
 const { squad } = await fbRefClient.getStatTables({
   league,
@@ -38,26 +38,31 @@ for (const row of squad.toRecords()) {
     teamId,
   })
 
-  const stats = getTeamShootingStats(logs.against)
+  const stats = getTeamAvgAgainstShootingStats(logs.against)
   allStats[team] = stats
 
-  sotHomeTotal += stats.Home.SoT
-  sotAwayTotal += stats.Away.SoT
-  shHomeTotal += stats.Home.Sh
-  shAwayTotal += stats.Away.Sh
+  sotHomeMeanSum += stats.Home.SoT
+  shHomeMeanSum += stats.Home.Sh
+  sotAwayMeanSum += stats.Away.SoT
+  shAwayMeanSum += stats.Away.Sh
 }
+
+const sotHomeMean = sotHomeMeanSum / squadCount
+const shHomeMean = shHomeMeanSum / squadCount
+const sotAwayMean = sotAwayMeanSum / squadCount
+const shAwayMean = shAwayMeanSum / squadCount
 
 const weights: LeagueTeamWeights = Object.fromEntries(
   Object.entries(allStats).map(([k, v]) => [
     k,
     {
       Home: {
-        SoT: (v.Home.SoT * squadCount) / sotHomeTotal,
-        Sh: (v.Home.Sh * squadCount) / shHomeTotal,
+        SoT: v.Home.SoT / sotHomeMean,
+        Sh: v.Home.Sh / shHomeMean,
       },
       Away: {
-        SoT: (v.Away.SoT * squadCount) / sotAwayTotal,
-        Sh: (v.Away.Sh * squadCount) / shAwayTotal,
+        SoT: v.Away.SoT / sotAwayMean,
+        Sh: v.Away.Sh / shAwayMean,
       },
     },
   ])

@@ -1,5 +1,5 @@
 import pl from 'nodejs-polars'
-import type { Tables, Team, Venue, StatCol } from '@/types/fbRef'
+import type { Tables, Team, StatCol } from '@/types/fbRef'
 import type { BettingField, League, OddsMap } from '@/types/internal'
 import type { Odds } from '@/types/oddsChecker'
 import { getOrCreate } from '@/utils/common'
@@ -12,7 +12,6 @@ import {
   getPointOdds,
   getPointProbabilities,
   getStatHitRate,
-  getTeamMeanStat,
   getTeamPlayersDf,
   getWeightedStat,
 } from '@/utils/table'
@@ -23,7 +22,6 @@ import {
   poissonGreaterOrEqual,
   valueOfOdds,
 } from '@/utils/probabilty'
-import { MIN_VALUE } from '@/config/constants'
 import type { FbRefClient } from '@/clients'
 
 function createOddsMapping(odds: Odds[]): OddsMap {
@@ -111,9 +109,9 @@ function getTeamFieldStatsDf({
   const kcCol = pl.Series('Kelly Criterion (%)', kcArray)
 
   const filtered = df
-    .withColumns(oddsCol, probCol, valueCol, kcCol) // add new columns
-    .filter(pl.col('EV (%)').gtEq(MIN_VALUE)) // filter low value odds
-    .filter(pl.col('Kelly Criterion (%)').gtEq(MIN_VALUE)) // filter low value odds
+    .withColumns(oddsCol, probCol, valueCol, kcCol)
+    .filter(pl.col('EV (%)').gtEq(0))
+    .filter(pl.col('Kelly Criterion (%)').gtEq(0))
 
   return filtered
 }
@@ -192,9 +190,9 @@ export async function addPlayerHitRates({
   league: League
   homeTeam: Team
 }) {
-  const allHitRates: number[] = []
-  const venueHitRates: number[] = []
-  const lastFiveHitRates: number[] = []
+  const seasonHitRates: string[] = []
+  const venueHitRates: string[] = []
+  const lastFiveHitRates: string[] = []
 
   const leagueCode = leagueToLeagueCode(league)
   const stat = bettingFieldToStatCol(field)
@@ -215,53 +213,23 @@ export async function addPlayerHitRates({
       })
     }
 
-    const allHR = getStatHitRate(logs, { stat, point })
-    allHitRates.push(allHR * 100)
+    const seasonHR = getStatHitRate(logs, { stat, point })
+    seasonHitRates.push(seasonHR)
 
     const venueHR = getStatHitRate(logs, { stat, point, venue })
-    venueHitRates.push(venueHR * 100)
+    venueHitRates.push(venueHR)
 
     const lastFiveHR = getStatHitRate(logs, { stat, point, limit: 5 })
-    lastFiveHitRates.push(lastFiveHR * 100)
+    lastFiveHitRates.push(lastFiveHR)
   }
 
-  const odds = df.getColumn('Odds').cast(pl.Float32).toArray()
+  const allHitRateCol = pl.Series('Season Hit rate', seasonHitRates)
 
-  const allHitRateCol = pl.Series('Hit rate (%)', allHitRates)
-  // const allValueCol = pl.Series(
-  //   'HR EV (%)',
-  //   zip(odds, allHitRates).map(([o, hr]) =>
-  //     valueOfOdds({ real: o, predicted: oddsOfProbability(hr) })
-  //   )
-  // )
+  const venueHitRateCol = pl.Series('Venue Hit rate', venueHitRates)
 
-  const venueHitRateCol = pl.Series('Venue Hit rate (%)', venueHitRates)
-  // const venueValueCol = pl.Series(
-  //   'Venue HR EV (%)',
-  //   zip(odds, venueHitRates).map(([o, hr]) =>
-  //     valueOfOdds({ real: o, predicted: oddsOfProbability(hr) })
-  //   )
-  // )
+  const lastFiveHitRateCol = pl.Series('Last 5 Hit rate', lastFiveHitRates)
 
-  const lastFiveHitRateCol = pl.Series('Last 5 Hit rate (%)', lastFiveHitRates)
-  // const lastFiveValueCol = pl.Series(
-  //   'Last 5 HR EV (%)',
-  //   zip(odds, lastFiveHitRates).map(([o, hr]) =>
-  //     valueOfOdds({ real: o, predicted: oddsOfProbability(hr) })
-  //   )
-  // )
-
-  return df.withColumns(
-    allHitRateCol,
-    // allValueCol,
-    venueHitRateCol,
-    // venueValueCol,
-    lastFiveHitRateCol
-    // lastFiveValueCol
-  )
-  // .filter(pl.col('HR EV (%)').gtEq(0))
-  // .filter(pl.col('Venue HR EV (%)').gtEq(0))
-  // .filter(pl.col('Last 5 HR EV (%)').gtEq(0))
+  return df.withColumns(allHitRateCol, venueHitRateCol, lastFiveHitRateCol)
 }
 
 export async function addWeightedStats({
@@ -287,6 +255,8 @@ export async function addWeightedStats({
 
   const weightedPredictions = []
   const values = []
+  const kcArray: number[] = []
+  const venues: string[] = []
 
   for (const row of df.toRecords()) {
     const playerId = row.ID as string
@@ -316,13 +286,23 @@ export async function addWeightedStats({
     const prediction = oddsOfProbability(pb)
 
     const value = valueOfOdds({ real: odds, predicted: prediction })
+    const kellyCriterion = getKellyCriterion(
+      odds,
+      getProbabilityOfOdds(prediction)
+    )
 
     weightedPredictions.push(prediction)
     values.push(value)
+    kcArray.push(kellyCriterion)
+    venues.push(isHome ? 'Home' : 'Away')
   }
 
-  const weightedCol = pl.Series('Prediction+', weightedPredictions)
-  const valueCol = pl.Series('EV+ (%)', values)
+  const weightedCol = pl.Series('Prediction', weightedPredictions)
+  const valueCol = pl.Series('EV (%)', values)
+  const kcCol = pl.Series('Kelly Criterion (%)', kcArray)
+  const venueCol = pl.Series('Venue', venues)
 
-  return df.withColumns(weightedCol, valueCol)
+  return df
+    .withColumns(venueCol, weightedCol, valueCol, kcCol)
+    .filter(pl.col('EV (%)').mul(pl.col('Kelly Criterion (%)')).gtEq(500))
 }
