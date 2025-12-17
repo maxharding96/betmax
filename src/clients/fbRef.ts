@@ -17,7 +17,7 @@ import {
 } from '../utils/fbRef'
 import { Scraper } from './scraper'
 import type { League } from '@/types/internal'
-import { join } from '@/utils/table'
+import { filterStatDf, join } from '@/utils/table'
 
 export class FbRefClient extends Scraper {
   constructor(browser: Browser) {
@@ -215,6 +215,6 @@ export class FbRefClient extends Scraper {
 
     const df = await this.getTable({ tableId, parseId })
 
-    return df.select(...getColumns({ table, stat }))
+    return filterStatDf(df.select(...getColumns({ table, stat })), { stat })
   }
 }

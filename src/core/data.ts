@@ -229,7 +229,9 @@ export async function addPlayerHitRates({
 
   const lastFiveHitRateCol = pl.Series('Last 5 Hit rate', lastFiveHitRates)
 
-  return df.withColumns(allHitRateCol, venueHitRateCol, lastFiveHitRateCol)
+  return df
+    .withColumns(allHitRateCol, venueHitRateCol, lastFiveHitRateCol)
+    .filter(pl.col('EV (%)').gtEq(0).and(pl.col('Kelly Criterion (%)').gtEq(0)))
 }
 
 export async function addWeightedStats({
@@ -297,12 +299,20 @@ export async function addWeightedStats({
     venues.push(isHome ? 'Home' : 'Away')
   }
 
-  const weightedCol = pl.Series('Prediction', weightedPredictions)
+  const weightedCol = pl.Series('Prediction +', weightedPredictions)
   const valueCol = pl.Series('EV (%)', values)
   const kcCol = pl.Series('Kelly Criterion (%)', kcArray)
   const venueCol = pl.Series('Venue', venues)
 
-  return df
-    .withColumns(venueCol, weightedCol, valueCol, kcCol)
-    .filter(pl.col('EV (%)').mul(pl.col('Kelly Criterion (%)')).gtEq(500))
+  return df.withColumns(venueCol, weightedCol, valueCol, kcCol).filter(
+    pl
+      .col('EV (%)')
+      .gtEq(0)
+      .and(
+        pl
+          .col('Kelly Criterion (%)')
+          .gtEq(0)
+          .and(pl.col('EV (%)').mul(pl.col('Kelly Criterion (%)')).gtEq(1000))
+      )
+  )
 }

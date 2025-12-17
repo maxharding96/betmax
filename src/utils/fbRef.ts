@@ -10,6 +10,7 @@ import type { BettingField, League } from '../types/internal'
 import type { Team as OddsCheckerTeam } from '../types/oddsChecker'
 import { slugify } from './common'
 import { readFileSync } from 'fs'
+import type { Team as FotMobTeam } from '@/types/fotmob'
 
 // https://fbref.com/en/players/de31038e/matchlogs/2025-2026/c9/Elliot-Anderson-Match-Logs
 
@@ -95,20 +96,29 @@ export function leagueToLeagueCode(league: League): LeagueCode {
   }
 }
 
-export function toFbRefTeam(team: OddsCheckerTeam): Team {
+export function toFbRefTeam(team: OddsCheckerTeam | FotMobTeam): Team {
   switch (team) {
     // Premier League
+    case 'AFC Bournemouth':
+      return 'Bournemouth'
+    case 'Brighton & Hove Albion':
+      return 'Brighton'
     case 'Leeds':
       return 'Leeds United'
     case 'Man City':
       return 'Manchester City'
     case 'Man Utd':
+    case 'Manchester United':
       return 'Manchester Utd'
     case 'Newcastle':
+    case 'Newcastle United':
       return 'Newcastle Utd'
     case 'Nottingham Forest':
       return "Nott'ham Forest"
+    case 'Tottenham Hotspur':
+      return 'Tottenham'
     case 'Wolverhampton':
+    case 'Wolverhampton Wanderers':
       return 'Wolves'
     // Championship
     case 'Birmingham':

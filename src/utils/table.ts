@@ -1,6 +1,6 @@
 import pl from 'nodejs-polars'
 import xlsx from 'xlsx'
-import type { StatCol, Team } from '../types/fbRef'
+import type { Stat, StatCol, Team } from '../types/fbRef'
 import { oddsOfProbability, poissonGreaterOrEqual } from './probabilty'
 import { findBestPlayerMatch, roundToTwo } from './common'
 import type { OddsMap } from '../types/internal'
@@ -59,6 +59,24 @@ export function getTeamMeanStat(
     .get(0)
 }
 
+export function filterStatDf(
+  df: pl.DataFrame,
+  {
+    stat,
+  }: {
+    stat: Stat
+  }
+) {
+  switch (stat) {
+    case 'shooting':
+    case 'standard':
+    case 'misc':
+      return df
+    case 'playingtime':
+      return df.filter(pl.col('Mn/Start').cast(pl.Int32).isNotNull())
+  }
+}
+
 export function getTeamPlayersDf(
   df: pl.DataFrame,
   {
@@ -81,7 +99,6 @@ export function getTeamPlayersDf(
       .and(pl.col('Starts').cast(pl.Float32).gtEq(MIN_GAME_STARTED))
       // Must have at least 3 of given stat. Otherwise sample is too small.
       .and(pl.col(col).cast(pl.Int32).gtEq(3))
-      .and(pl.col('Mn/Start').isNotNull())
   )
 
   if (lineups) {
@@ -325,8 +342,10 @@ export function getWeightedStat(
   { stat, mps, isHome }: { stat: StatCol; mps: number; isHome: boolean }
 ) {
   try {
-    const home = df.filter(pl.col('Venue').eq(pl.lit('Home')))
-    const away = df.filter(pl.col('Venue').eq(pl.lit('Away')))
+    const played = df.filter(pl.col('Min').cast(pl.Int32).isNotNull())
+
+    const home = played.filter(pl.col('Venue').eq(pl.lit('Home')))
+    const away = played.filter(pl.col('Venue').eq(pl.lit('Away')))
 
     const homeTotal = home.getColumn(stat).cast(pl.Int32).sum()
     const awayTotal = away.getColumn(stat).cast(pl.Int32).sum()
@@ -341,7 +360,10 @@ export function getWeightedStat(
       ? VENUE_ALPHA * homeRate + (1 - VENUE_ALPHA) * awayRate
       : VENUE_ALPHA * awayRate + (1 - VENUE_ALPHA) * homeRate
 
-    const last5 = df.tail(6).head(5)
+    const last5 =
+      played.height > 5
+        ? played.tail(6).head(5)
+        : played.head(played.height - 1)
 
     const last5Total = last5.getColumn(stat).cast(pl.Int32).sum()
     const last5Minutes = last5.getColumn('Min').cast(pl.Int32).sum()

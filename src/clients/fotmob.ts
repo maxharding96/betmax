@@ -2,6 +2,9 @@ import type { Browser } from 'playwright'
 import { Scraper } from './scraper'
 import type { League } from '@/types/internal'
 import { getFixturesPath } from '@/utils/fotmob'
+import { teamEnum } from '@/types/fotmob'
+import { toFbRefTeam } from '@/utils/fbRef'
+import type { Team } from '@/types/fbRef'
 
 export class FotMobClient extends Scraper {
   constructor(browser: Browser) {
@@ -18,11 +21,13 @@ export class FotMobClient extends Scraper {
 
     const url = this.baseUrl + getFixturesPath(league)
 
+    console.log(url)
+
     await page.goto(url, { waitUntil: 'domcontentloaded' })
 
     const links = await page.locator("a[class*='MatchWrapper']").all()
 
-    const hostToFixturePath = new Map<string, string>()
+    const hostToFixturePath = new Map<Team, string>()
 
     for (const link of links) {
       const href = await link.getAttribute('href')
@@ -31,13 +36,22 @@ export class FotMobClient extends Scraper {
       }
 
       const span = await link.locator("span[class*='TeamName']").first()
-      const host = await span.textContent()
+      const unsafeHost = await span.textContent()
 
-      if (!host) {
+      if (!unsafeHost) {
         continue
       }
 
-      hostToFixturePath.set(host, href)
+      const host = teamEnum.safeParse(unsafeHost)
+
+      if (host.error) {
+        console.log(`Failed to parse team ${unsafeHost}.`)
+        continue
+      }
+
+      const team = toFbRefTeam(host.data)
+
+      hostToFixturePath.set(team, href)
     }
 
     return hostToFixturePath
@@ -51,11 +65,29 @@ export class FotMobClient extends Scraper {
 
     await page.goto(url, { waitUntil: 'domcontentloaded' })
 
-    const spans = await page.locator("span[class*='LineupPlayerText']").all()
+    const titleLocator = await page
+      .locator("h2[class*='LineupTitleCSS']")
+      .first()
 
-    const players = await Promise.all(spans.map((span) => span.textContent()))
+    const title = await titleLocator.textContent()
+
+    if (title !== '???') {
+      return null
+    }
+
+    const lineupSection = await page
+      .locator("section[class*='LineupFieldContainer']")
+      .first()
+
+    const spans = await lineupSection
+      .locator("span[class*='LineupPlayerText']")
+      .all()
+
+    const players = await Promise.all(
+      spans.map((span) => span.getAttribute('title'))
+    )
     const lineups = players.filter((p) => p !== null)
 
-    return lineups.length ? lineups : null
+    return lineups
   }
 }
