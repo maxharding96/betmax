@@ -5,6 +5,9 @@ export const leagueEnum = z.enum([
   'Championship',
   'League 1',
   'La Liga',
+  'Scottish Premier League',
+  'Bundesliga',
+  'Seria A',
 ])
 
 export type League = z.infer<typeof leagueEnum>
@@ -12,7 +15,6 @@ export type League = z.infer<typeof leagueEnum>
 export const bettingFieldEnum = z.enum([
   'Player Shots On Target',
   'Player Shots',
-  'Player Fouls',
 ])
 
 export type BettingField = z.infer<typeof bettingFieldEnum>

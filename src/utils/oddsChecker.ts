@@ -12,13 +12,30 @@ export function leagueToPath(league: League): string {
       return '/english/league-1'
     case 'La Liga':
       return '/spain/la-liga-primera'
+    case 'Scottish Premier League':
+      return '/scottish/premiership'
+    case 'Bundesliga':
+      return '/germany/bundesliga'
+    case 'Seria A':
+      return '/italy/serie-a'
   }
 }
 
 export function matchToPath(match: Match) {
   const base = leagueToPath(match.league)
-  const home = slugify(match.home)
-  const away = slugify(match.away)
+  const home = slugify(match.home, true)
+  const away = slugify(match.away, true)
 
   return `${base}/${home}-v-${away}/winner`
+}
+
+export function createFixtureToMatchMap(matches: Match[]) {
+  const fixtureToMatch = new Map<string, Match>()
+
+  for (const match of matches) {
+    const fixture = `${match.home} vs. ${match.away}`
+    fixtureToMatch.set(fixture, match)
+  }
+
+  return fixtureToMatch
 }

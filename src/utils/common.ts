@@ -12,8 +12,14 @@ export function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
-export function slugify(str: string) {
-  return str.toLowerCase().replaceAll(' ', '-')
+export function slugify(str: string, lower?: boolean) {
+  const slug = str.replaceAll(' ', '-')
+
+  if (lower) {
+    return slug.toLowerCase()
+  }
+
+  return slug
 }
 
 export function roundToTwo(num: number): number {

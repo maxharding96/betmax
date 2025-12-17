@@ -26,6 +26,8 @@ export class OddsCheckerClient extends Scraper {
   async getMatches(input: GetMatchesInput): Promise<GetMatchesOutput> {
     const { league } = input
 
+    await this.rateLimiter.consume()
+
     const url = this.baseUrl + leagueToPath(league)
 
     const page = await this.getPage()
@@ -40,6 +42,9 @@ export class OddsCheckerClient extends Scraper {
         break
       case 'League 1':
       case 'La Liga':
+      case 'Scottish Premier League':
+      case 'Bundesliga':
+      case 'Seria A':
         locator = page.locator('p.fixtures-bet-name.beta-footnote')
     }
 
@@ -64,6 +69,8 @@ export class OddsCheckerClient extends Scraper {
 
   async getOdds(input: GetOddsInput): Promise<GetOddsOutput | null> {
     const { fields, match } = input
+
+    await this.rateLimiter.consume()
 
     const url = this.baseUrl + matchToPath(match)
 
